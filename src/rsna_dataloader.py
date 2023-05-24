@@ -13,7 +13,8 @@ from skimage.io import imread
 # in my default_paths.py file:
 DATA_DIR_RSNA = "../data/"
 DATA_DIR_RSNA_PROCESSED_IMAGES = DATA_DIR_RSNA + "preprocess_224_224"
-PATH_TO_PNEUMONIA_WITH_METADATA_CSV = DATA_DIR_RSNA + "pneumonia_dataset_with_metadata.csv"
+# PATH_TO_PNEUMONIA_WITH_METADATA_CSV = DATA_DIR_RSNA + "pneumonia_dataset_with_metadata.csv"
+PATH_TO_PNEUMONIA_WITH_METADATA_CSV = DATA_DIR_RSNA + "truncated.csv"
 # The original dataset can be found at https://www.kaggle.com/c/rsna-pneumonia-detection-challenge
 # This dataset is originally a (relabelled) subset of the NIH dataset https://www.kaggle.com/datasets/nih-chest-xrays/data from
 # which i took the metadata.
@@ -102,7 +103,6 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         indices_train_val, indices_test = train_test_split(
             np.arange(len(df_with_all_labels)), test_size=0.15, random_state=random_seed_for_splits
         )
-        print(indices_train_val)
         # train_val_df = self.df_to_use.iloc[indices_train_val]
         # test_df = self.df_to_use.iloc[indices_test]
         train_val_df = df_with_all_labels.iloc[indices_train_val]
