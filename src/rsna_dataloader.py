@@ -11,15 +11,15 @@ from skimage.io import imread
 
 
 # in my default_paths.py file:
-# DATA_DIR_RSNA = "/vol/biodata/data/chest_xray/rsna-pneumonia-detection-challenge"
-# DATA_DIR_RSNA_PROCESSED_IMAGES = DATA_DIR_RSNA / "preprocess_224_224"
-# PATH_TO_PNEUMONIA_WITH_METADATA_CSV = "pneumonia_dataset_with_metadata.csv"
+DATA_DIR_RSNA = "../data/"
+DATA_DIR_RSNA_PROCESSED_IMAGES = DATA_DIR_RSNA + "preprocess_224_224"
+PATH_TO_PNEUMONIA_WITH_METADATA_CSV = DATA_DIR_RSNA + "pneumonia_dataset_with_metadata.csv"
 # The original dataset can be found at https://www.kaggle.com/c/rsna-pneumonia-detection-challenge
 # This dataset is originally a (relabelled) subset of the NIH dataset https://www.kaggle.com/datasets/nih-chest-xrays/data from
 # which i took the metadata.
 
 
-from default_paths import DATA_DIR_RSNA, DATA_DIR_RSNA_PROCESSED_IMAGES, PATH_TO_PNEUMONIA_WITH_METADATA_CSV
+# from default_paths import DATA_DIR_RSNA, DATA_DIR_RSNA_PROCESSED_IMAGES, PATH_TO_PNEUMONIA_WITH_METADATA_CSV
 
 
 class RNSAPneumoniaDetectionDataset(VisionDataset):
@@ -84,8 +84,8 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         self.val_transforms = val_transforms if val_transforms is not None else ToTensor()
         self.shuffle = shuffle
         self.val_split = val_split
-        if not DATA_DIR_RSNA_PROCESSED_IMAGES.exists():
-            f"Data dir: {DATA_DIR_RSNA_PROCESSED_IMAGES} does not exist. Have you updated default_paths.py?"
+        # if not DATA_DIR_RSNA_PROCESSED_IMAGES.exists():
+        #     f"Data dir: {DATA_DIR_RSNA_PROCESSED_IMAGES} does not exist. Have you updated default_paths.py?"
 
         df_with_all_labels = pd.read_csv(PATH_TO_PNEUMONIA_WITH_METADATA_CSV)
 
@@ -102,8 +102,11 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         indices_train_val, indices_test = train_test_split(
             np.arange(len(df_with_all_labels)), test_size=0.15, random_state=random_seed_for_splits
         )
-        train_val_df = self.df_to_use.iloc[indices_train_val]
-        test_df = self.df_to_use.iloc[indices_test]
+        print(indices_train_val)
+        # train_val_df = self.df_to_use.iloc[indices_train_val]
+        # test_df = self.df_to_use.iloc[indices_test]
+        train_val_df = df_with_all_labels.iloc[indices_train_val]
+        test_df = df_with_all_labels.iloc[indices_test]
         
         # Further split train and val
         indices_train, indices_val = train_test_split(
