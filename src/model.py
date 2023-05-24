@@ -1,5 +1,9 @@
 import torch, torch.nn as nn, torch.utils.data as data, torchvision as tv, torch.nn.functional as F
 import pytorch_lightning as pl
+from torchmetrics import Accuracy
+from torchmetrics.classification import BinaryF1Score
+
+# adapted from https://www.scaler.com/topics/pytorch/build-and-train-an-image-classification-model-with-pytorch-lightning/
 
 class LitModel(pl.LightningModule):
     '''model architecture, training, testing and validation loops'''
@@ -27,7 +31,8 @@ class LitModel(pl.LightningModule):
         self.fc2 = nn.Linear(512, 128)
         self.fc3 = nn.Linear(128, num_classes)
 
-        # self.accuracy = Accuracy(task="multiclass", num_classes=10)
+        self.accuracy = Accuracy(task="binary", num_classes=2)
+        self.f1 = BinaryF1Score()
 
     def _get_output_shape(self, shape):
         '''returns the size of the output tensor from the conv layers'''
@@ -68,9 +73,11 @@ class LitModel(pl.LightningModule):
         
         # metric
         preds = torch.argmax(logits, dim=1)
-        # acc = self.accuracy(preds, y)
+        acc = self.accuracy(preds, y)
+        f1 = self.f1(preds, y)
         self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
-        # self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True)
+        self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
+        self.log('train_f1', f1, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
         return loss
     
     # validation loop
@@ -80,9 +87,11 @@ class LitModel(pl.LightningModule):
         loss = F.nll_loss(logits, y)
 
         preds = torch.argmax(logits, dim=1)
-        # acc = self.accuracy(preds, y)
+        acc = self.accuracy(preds, y)
+        f1 = self.f1(preds, y)
         self.log('val_loss', loss, prog_bar=True, batch_size=self.batch_size)
-        # self.log('val_acc', acc, prog_bar=True)
+        self.log('val_acc', acc, prog_bar=True, batch_size=self.batch_size)
+        self.log('val_f1', f1, prog_bar=True, batch_size=self.batch_size)
         return loss
     
     # test loop
@@ -92,9 +101,11 @@ class LitModel(pl.LightningModule):
         loss = F.nll_loss(logits, y)
         
         preds = torch.argmax(logits, dim=1)
-        # acc = self.accuracy(preds, y)
+        acc = self.accuracy(preds, y)
+        f1 = self.f1(preds, y)
         self.log('test_loss', loss, prog_bar=True, batch_size=self.batch_size)
-        # self.log('test_acc', acc, prog_bar=True)
+        self.log('test_acc', acc, prog_bar=True, batch_size=self.batch_size)
+        self.log('test_f1', f1, prog_bar=True, batch_size=self.batch_size)
         return loss
     
     # optimizers 

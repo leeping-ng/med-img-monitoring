@@ -13,8 +13,8 @@ from skimage.io import imread
 # in my default_paths.py file:
 DATA_DIR_RSNA = "../data/"
 DATA_DIR_RSNA_PROCESSED_IMAGES = DATA_DIR_RSNA + "preprocess_224_224"
-# PATH_TO_PNEUMONIA_WITH_METADATA_CSV = DATA_DIR_RSNA + "pneumonia_dataset_with_metadata.csv"
-PATH_TO_PNEUMONIA_WITH_METADATA_CSV = DATA_DIR_RSNA + "truncated.csv"
+PATH_TO_PNEUMONIA_WITH_METADATA_CSV = DATA_DIR_RSNA + "pneumonia_dataset_with_metadata.csv"
+# PATH_TO_PNEUMONIA_WITH_METADATA_CSV = DATA_DIR_RSNA + "truncated.csv"
 # The original dataset can be found at https://www.kaggle.com/c/rsna-pneumonia-detection-challenge
 # This dataset is originally a (relabelled) subset of the NIH dataset https://www.kaggle.com/datasets/nih-chest-xrays/data from
 # which i took the metadata.
