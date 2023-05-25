@@ -127,13 +127,19 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         )
         self.dataset_test = RNSAPneumoniaDetectionDataset(
             str(DATA_DIR_RSNA_PROCESSED_IMAGES),
-            dataframe=test_df,
+            dataframe=test_df, #.iloc[32:64], # to be removed
+            transform=self.val_transforms,
+        )
+        self.dataset_predict = RNSAPneumoniaDetectionDataset(
+            str(DATA_DIR_RSNA_PROCESSED_IMAGES),
+            dataframe=test_df.iloc[:1],
             transform=self.val_transforms,
         )
 
         print("#train: ", len(self.dataset_train))
         print("#val:   ", len(self.dataset_val))
         print("#test:  ", len(self.dataset_test))
+        print("#predict:  ", len(self.dataset_predict))
         
         
 
@@ -157,6 +163,14 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         return DataLoader(
             self.dataset_test,
             self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+        )
+    
+    def predict_dataloader(self):
+        return DataLoader(
+            self.dataset_predict,
+            1,
             shuffle=False,
             num_workers=self.num_workers,
         )

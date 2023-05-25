@@ -1,7 +1,8 @@
 import torch, torch.nn as nn, torch.utils.data as data, torchvision as tv, torch.nn.functional as F
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
-from torchmetrics.classification import BinaryF1Score
+
+from torchmetrics.classification import BinaryPrecision, BinaryRecall, BinaryF1Score, BinaryConfusionMatrix, BinaryAUROC
 
 # adapted from https://www.scaler.com/topics/pytorch/build-and-train-an-image-classification-model-with-pytorch-lightning/
 
@@ -32,7 +33,13 @@ class LitModel(pl.LightningModule):
         self.fc3 = nn.Linear(128, num_classes)
 
         self.accuracy = Accuracy(task="binary", num_classes=2)
+        self.precision = BinaryPrecision()
+        self.recall = BinaryRecall()
         self.f1 = BinaryF1Score()
+        self.bcm = BinaryConfusionMatrix()
+        self.b_auroc = BinaryAUROC()
+        # confusion matrix
+        self.matrix = torch.tensor([[0,0], [0,0]]).to("cuda:0")
 
     def _get_output_shape(self, shape):
         '''returns the size of the output tensor from the conv layers'''
@@ -102,11 +109,32 @@ class LitModel(pl.LightningModule):
         
         preds = torch.argmax(logits, dim=1)
         acc = self.accuracy(preds, y)
+        precision = self.precision(preds, y)
+        recall = self.recall(preds, y)
         f1 = self.f1(preds, y)
+        b_auroc = self.b_auroc(preds, y)
+        # accumulate to confusion matrix
+        self.matrix += self.bcm(preds, y)
         self.log('test_loss', loss, prog_bar=True, batch_size=self.batch_size)
         self.log('test_acc', acc, prog_bar=True, batch_size=self.batch_size)
+        self.log('test_precision', precision, prog_bar=True, batch_size=self.batch_size)
+        self.log('test_recall', recall, prog_bar=True, batch_size=self.batch_size)
         self.log('test_f1', f1, prog_bar=True, batch_size=self.batch_size)
+        self.log('test_auc_roc', b_auroc, prog_bar=True, batch_size=self.batch_size)
+
         return loss
+
+    def predict_step(self, batch, batch_idx):
+        x, _ = batch["image"], batch["target"]
+        x = self._feature_extractor(x)
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        # use softmax for K-S test later
+        print(x)
+        x = F.log_softmax(self.fc3(x), dim=1)
+        
+        return x
     
     # optimizers 
     def configure_optimizers(self):
