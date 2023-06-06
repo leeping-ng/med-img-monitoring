@@ -39,7 +39,7 @@ class LitModel(pl.LightningModule):
         self.bcm = BinaryConfusionMatrix()
         self.b_auroc = BinaryAUROC()
         # confusion matrix
-        self.matrix = torch.tensor([[0,0], [0,0]]).to("cuda:0")
+        self.matrix = torch.tensor([[0,0], [0,0]]).to("cuda:0") # need to remove hardcoding, it could be cuda:1
 
     def _get_output_shape(self, shape):
         '''returns the size of the output tensor from the conv layers'''

@@ -51,6 +51,7 @@ class RNSAPneumoniaDetectionDataset(VisionDataset):
     def __getitem__(self, index: int):
         filename = self.filenames[index]
         scan_image = imread(filename).astype(np.float32)
+        scan_image = np.repeat(scan_image[..., np.newaxis], 3, -1)
         return {
             "image": self.transform(scan_image),
             "target": self.targets[index],
