@@ -1,145 +1,114 @@
-import torch, torch.nn as nn, torch.utils.data as data, torchvision as tv, torch.nn.functional as F
+# Adapted from https://github.com/Stevellen/ResNet-Lightning/blob/master/resnet_classifier.py
+
 import pytorch_lightning as pl
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.models as models
+from torch.optim import SGD, Adam
 from torchmetrics import Accuracy
+from torchvision import transforms
 
-from torchmetrics.classification import BinaryPrecision, BinaryRecall, BinaryF1Score, BinaryConfusionMatrix, BinaryAUROC
+from torchmetrics.classification import BinaryAUROC
 
-# adapted from https://www.scaler.com/topics/pytorch/build-and-train-an-image-classification-model-with-pytorch-lightning/
+class ResNetClassifier(pl.LightningModule):
+    resnets = {
+        18: models.resnet18,
+        34: models.resnet34,
+        50: models.resnet50,
+        101: models.resnet101,
+        152: models.resnet152,
+    }
+    optimizers = {"adam": Adam, "sgd": SGD}
 
-class LitModel(pl.LightningModule):
-    '''model architecture, training, testing and validation loops'''
-    def __init__(self, input_shape, num_classes, batch_size, learning_rate=3e-4):
+    def __init__(
+        self,
+        num_classes,
+        resnet_version,
+        optimizer="adam",
+        lr=1e-4,
+        batch_size=32,
+        tune_fc_only=True,
+    ):
         super().__init__()
-        
+
         # log hyperparameters
         self.save_hyperparameters()
-        self.learning_rate = learning_rate
+        self.num_classes = num_classes
+        self.lr = lr
         self.batch_size = batch_size
-        
-        # model architecture
-        self.conv1 = nn.Conv2d(1, 32, 3, 1)
-        self.conv2 = nn.Conv2d(32, 32, 3, 1)
-        self.conv3 = nn.Conv2d(32, 64, 3, 1)
-        self.conv4 = nn.Conv2d(64, 64, 3, 1)
 
-        self.pool1 = torch.nn.MaxPool2d(2)
-        self.pool2 = torch.nn.MaxPool2d(2)
-        
-        n_sizes = self._get_output_shape(input_shape)
+        self.optimizer = self.optimizers[optimizer]
+        # instantiate loss criterion
 
-        # linear layers for classifier head
-        self.fc1 = nn.Linear(n_sizes, 512)
-        self.fc2 = nn.Linear(512, 128)
-        self.fc3 = nn.Linear(128, num_classes)
+        self.loss_fn = nn.CrossEntropyLoss()
 
-        self.accuracy = Accuracy(task="binary", num_classes=2)
-        self.precision = BinaryPrecision()
-        self.recall = BinaryRecall()
-        self.f1 = BinaryF1Score()
-        self.bcm = BinaryConfusionMatrix()
+        # create accuracy metric
+        self.acc = Accuracy(
+            task="binary" if num_classes == 2 else "multiclass", num_classes=num_classes
+        )
         self.b_auroc = BinaryAUROC()
-        # confusion matrix
-        self.matrix = torch.tensor([[0,0], [0,0]]).to("cuda:0") # need to remove hardcoding, it could be cuda:1
+        # Using a pretrained ResNet backbone
+        backbone = self.resnets[resnet_version](weights="IMAGENET1K_V1")
+        num_filters = backbone.fc.in_features
+        layers = list(backbone.children())[:-1]
+        self.feature_extractor = nn.Sequential(*layers)
+        self.classifier = nn.Linear(num_filters, num_classes)
 
-    def _get_output_shape(self, shape):
-        '''returns the size of the output tensor from the conv layers'''
+        # if tune_fc_only:  # option to only tune the fully-connected layers
+        #     for child in list(self.resnet_model.children())[:-1]:
+        #         for param in child.parameters():
+        #             param.requires_grad = False
 
-        batch_size = 1
-        input = torch.autograd.Variable(torch.rand(batch_size, *shape))
 
-        output_feat = self._feature_extractor(input) 
-        n_size = output_feat.data.view(batch_size, -1).size(1)
-        return n_size
-        
-    
-    # computations
-    def _feature_extractor(self, x):
-        '''extract features from the conv blocks'''
-        x = F.relu(self.conv1(x))
-        x = self.pool1(F.relu(self.conv2(x)))
-        x = F.relu(self.conv3(x))
-        x = self.pool2(F.relu(self.conv4(x)))
-        return x
-    
-    
-    def forward(self, x):
-        '''produce final model output'''
-        x = self._feature_extractor(x)
+    def forward(self, X):
+        x = self.feature_extractor(X)
+        # Flatten the tensor for linear layer
         x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.log_softmax(self.fc3(x), dim=1)
-        return x
-    
-    # train loop
-    def training_step(self, batch, batch_idx):
-        x, y = batch["image"], batch["target"]
-
-        logits = self(x)
-        loss = F.nll_loss(logits, y)
-        
-        # metric
-        preds = torch.argmax(logits, dim=1)
-        acc = self.accuracy(preds, y)
-        f1 = self.f1(preds, y)
-        self.log('train_loss', loss, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
-        self.log('train_acc', acc, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
-        self.log('train_f1', f1, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
-        return loss
-    
-    # validation loop
-    def validation_step(self, batch, batch_idx):
-        x, y = batch["image"], batch["target"]
-        logits = self(x)
-        loss = F.nll_loss(logits, y)
-
-        preds = torch.argmax(logits, dim=1)
-        acc = self.accuracy(preds, y)
-        f1 = self.f1(preds, y)
-        self.log('val_loss', loss, prog_bar=True, batch_size=self.batch_size)
-        self.log('val_acc', acc, prog_bar=True, batch_size=self.batch_size)
-        self.log('val_f1', f1, prog_bar=True, batch_size=self.batch_size)
-        return loss
-    
-    # test loop
-    def test_step(self, batch, batch_idx):
-        x, y = batch["image"], batch["target"]
-        logits = self(x)
-        loss = F.nll_loss(logits, y)
-        
-        preds = torch.argmax(logits, dim=1)
-        acc = self.accuracy(preds, y)
-        precision = self.precision(preds, y)
-        recall = self.recall(preds, y)
-        f1 = self.f1(preds, y)
-        b_auroc = self.b_auroc(preds, y)
-        # accumulate to confusion matrix
-        self.matrix += self.bcm(preds, y)
-        self.log('test_loss', loss, prog_bar=True, batch_size=self.batch_size)
-        self.log('test_acc', acc, prog_bar=True, batch_size=self.batch_size)
-        self.log('test_precision', precision, prog_bar=True, batch_size=self.batch_size)
-        self.log('test_recall', recall, prog_bar=True, batch_size=self.batch_size)
-        self.log('test_f1', f1, prog_bar=True, batch_size=self.batch_size)
-        self.log('test_auc_roc', b_auroc, prog_bar=True, batch_size=self.batch_size)
-
-        return loss
-
-    def predict_step(self, batch, batch_idx):
-        x, _ = batch["image"], batch["target"]
-        x = self._feature_extractor(x)
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        # use softmax for K-S test later
-        print(x)
-        x = F.log_softmax(self.fc3(x), dim=1)
+        x = self.classifier(x)
         
         return x
-    
-    # optimizers 
+
+
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
-        return optimizer
+        return self.optimizer(self.parameters(), lr=self.lr)
+
+    def _step(self, batch):
+        x, y = batch["image"], batch["target"]
+        logits = self.forward(x)
+        loss = self.loss_fn(logits, y)
+
+        # Labels from logits - softmax prior?
+        preds = torch.argmax(logits, dim=1)
+
+        acc = self.acc(preds, y)
+        roc = self.b_auroc(preds, y)
+
+        return loss, acc, roc
 
 
+    def training_step(self, batch, batch_idx):
+        loss, acc, roc = self._step(batch)
+        # perform logging
+        self.log("train_loss", loss, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
+        self.log("train_acc", acc, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
+        self.log("train_roc-auc", roc, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
+        return loss
 
+
+    def validation_step(self, batch, batch_idx):
+        loss, acc, roc = self._step(batch)
+        # perform logging
+        self.log("val_loss", loss, on_epoch=True, prog_bar=False, logger=True, batch_size=self.batch_size)
+        self.log("val_acc", acc, on_epoch=True, prog_bar=True, logger=True, batch_size=self.batch_size)
+        self.log("val_roc-auc", roc, on_epoch=True, prog_bar=True, logger=True, batch_size=self.batch_size)
+
+
+    def test_step(self, batch, batch_idx):
+        loss, acc, roc = self._step(batch)
+        # perform logging
+        self.log("test_loss", loss, on_step=True, prog_bar=True, logger=True, batch_size=self.batch_size)
+        self.log("test_acc", acc, on_step=True, prog_bar=True, logger=True, batch_size=self.batch_size)
+        self.log("test_roc-auc", roc, on_epoch=True, prog_bar=True, logger=True, batch_size=self.batch_size)
+
+    

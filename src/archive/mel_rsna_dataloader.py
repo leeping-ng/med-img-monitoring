@@ -1,19 +1,34 @@
-# Adapted from: https://github.com/melanibe/failure_detection_benchmark/blob/main/data_handling/rsna_pneumonia.py
-
+from pathlib import Path
+from typing import Callable
 import numpy as np
 import pandas as pd
-import pytorch_lightning as pl
-
-from pathlib import Path
-from skimage.io import imread
-from sklearn.model_selection import train_test_split
-from torch.utils.data.dataloader import DataLoader
 from torchvision.datasets import VisionDataset
 from torchvision.transforms import ToTensor
+import pytorch_lightning as pl
+from sklearn.model_selection import train_test_split
+from torch.utils.data.dataloader import DataLoader
+from skimage.io import imread
+
+
+# in my default_paths.py file:
+# DATA_DIR_RSNA = "/vol/biodata/data/chest_xray/rsna-pneumonia-detection-challenge"
+# DATA_DIR_RSNA_PROCESSED_IMAGES = DATA_DIR_RSNA / "preprocess_224_224"
+# PATH_TO_PNEUMONIA_WITH_METADATA_CSV = "pneumonia_dataset_with_metadata.csv"
+# The original dataset can be found at https://www.kaggle.com/c/rsna-pneumonia-detection-challenge
+# This dataset is originally a (relabelled) subset of the NIH dataset https://www.kaggle.com/datasets/nih-chest-xrays/data from
+# which i took the metadata.
+
+
+from default_paths import DATA_DIR_RSNA, DATA_DIR_RSNA_PROCESSED_IMAGES, PATH_TO_PNEUMONIA_WITH_METADATA_CSV
 
 
 class RNSAPneumoniaDetectionDataset(VisionDataset):
-    def __init__(self, root, dataframe, transform):
+    def __init__(
+        self,
+        root: str,
+        dataframe: pd.DataFrame,
+        transform: Callable,
+    ) -> None:
         """
         Torchvision dataset for loading RSNA dataset.
         Args:
@@ -24,7 +39,7 @@ class RNSAPneumoniaDetectionDataset(VisionDataset):
         This dataset returns a dictionary with the image data, label and metadata. 
         """
         super().__init__(root=root, transform=transform)
-        self.root = Path(self.root)
+        self.root = Path(self.root)  # type: ignore
         self.dataset_dataframe = dataframe
         self.targets = self.dataset_dataframe.label_rsna_pneumonia.values.astype(np.int64)
         self.subject_ids = self.dataset_dataframe.patientId.values
@@ -35,8 +50,6 @@ class RNSAPneumoniaDetectionDataset(VisionDataset):
     def __getitem__(self, index: int):
         filename = self.filenames[index]
         scan_image = imread(filename).astype(np.float32)
-        # Added to convert from 1 channel to 3 channels of grayscale
-        scan_image = np.repeat(scan_image[..., np.newaxis], 3, -1)
         return {
             "image": self.transform(scan_image),
             "target": self.targets[index],
@@ -52,7 +65,6 @@ class RNSAPneumoniaDetectionDataset(VisionDataset):
 class RSNAPneumoniaDataModule(pl.LightningDataModule):
     def __init__(
         self,
-        config,
         train_transforms=None,
         val_transforms=None,
         batch_size=32,
@@ -65,18 +77,17 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         Pytorch Lightning DataModule defining train / val / test splits for the RSNA dataset. 
         """
         super().__init__()
-        self.image_data = config["data"]["image_folder"]
-        self.csv_data = config["data"]["metadata_path"]
+        self.root_dir = DATA_DIR_RSNA
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.train_transforms = train_transforms if train_transforms is not None else ToTensor()
         self.val_transforms = val_transforms if val_transforms is not None else ToTensor()
         self.shuffle = shuffle
         self.val_split = val_split
-        # if not DATA_DIR_RSNA_PROCESSED_IMAGES.exists():
-        #     f"Data dir: {DATA_DIR_RSNA_PROCESSED_IMAGES} does not exist. Have you updated default_paths.py?"
+        if not DATA_DIR_RSNA_PROCESSED_IMAGES.exists():
+            f"Data dir: {DATA_DIR_RSNA_PROCESSED_IMAGES} does not exist. Have you updated default_paths.py?"
 
-        df_with_all_labels = pd.read_csv(self.csv_data)
+        df_with_all_labels = pd.read_csv(PATH_TO_PNEUMONIA_WITH_METADATA_CSV)
 
         print("DISTRIBUTION LABEL BY GENDER")
         print(
@@ -91,12 +102,8 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         indices_train_val, indices_test = train_test_split(
             np.arange(len(df_with_all_labels)), test_size=0.15, random_state=random_seed_for_splits
         )
-
-        # ***self.df_to_use has not been initialised***
-        # train_val_df = self.df_to_use.iloc[indices_train_val]
-        # test_df = self.df_to_use.iloc[indices_test]
-        train_val_df = df_with_all_labels.iloc[indices_train_val]
-        test_df = df_with_all_labels.iloc[indices_test]
+        train_val_df = self.df_to_use.iloc[indices_train_val]
+        test_df = self.df_to_use.iloc[indices_test]
         
         # Further split train and val
         indices_train, indices_val = train_test_split(
@@ -106,30 +113,24 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         val_df = train_val_df.iloc[indices_val]
 
         self.dataset_train = RNSAPneumoniaDetectionDataset(
-            str(self.image_data),
+            str(DATA_DIR_RSNA_PROCESSED_IMAGES),
             dataframe=train_df,
             transform=self.train_transforms,
         )
         self.dataset_val = RNSAPneumoniaDetectionDataset(
-            str(self.image_data),
+            str(DATA_DIR_RSNA_PROCESSED_IMAGES),
             dataframe=val_df,
             transform=self.val_transforms,
         )
         self.dataset_test = RNSAPneumoniaDetectionDataset(
-            str(self.image_data),
+            str(DATA_DIR_RSNA_PROCESSED_IMAGES),
             dataframe=test_df,
             transform=self.val_transforms,
         )
-        # self.dataset_predict = RNSAPneumoniaDetectionDataset(
-        #     str(self.image_data),
-        #     dataframe=test_df.iloc[:1],
-        #     transform=self.val_transforms,
-        # )
 
         print("#train: ", len(self.dataset_train))
         print("#val:   ", len(self.dataset_val))
         print("#test:  ", len(self.dataset_test))
-        # print("#predict:  ", len(self.dataset_predict))
         
         
 
@@ -156,13 +157,5 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
-    
-    # def predict_dataloader(self):
-    #     return DataLoader(
-    #         self.dataset_predict,
-    #         1,
-    #         shuffle=False,
-    #         num_workers=self.num_workers,
-    #     )
 
 

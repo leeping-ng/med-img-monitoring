@@ -1,0 +1,3 @@
+data:
+  image_folder: "../data/preprocess_224_224"
+  metadata_path: "../data/pneumonia_dataset_with_metadata.csv"
