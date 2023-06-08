@@ -1,21 +1,21 @@
-import pytorch_lightning as L
-from rsna_dataloader import RSNAPneumoniaDataModule
-# from model import LitModel
+import pytorch_lightning as pl
+from torchsummary import summary
+
 from config import load_config
 from model import ResNetClassifier
-from torchsummary import summary
+from rsna_dataloader import RSNAPneumoniaDataModule
 
 
 CONFIG_PATH = "config.yml"
 
 if __name__ == "__main__":
     configs = load_config(CONFIG_PATH)
-    #model = LitModel.load_from_checkpoint("lightning_logs/version_33/checkpoints/epoch=19-step=12760.ckpt")
-    model = ResNetClassifier.load_from_checkpoint("lightning_logs/version_88/checkpoints/epoch=18-step=12122.ckpt")
-    summary(model, input_size=(3, 224, 224), batch_size=32)
+    model = ResNetClassifier.load_from_checkpoint(configs["evaluation"]["checkpoint_path"])
+    summary(model, 
+            input_size=tuple(configs["model"]["input_size"]), 
+            batch_size=configs["training"]["batch_size"])
     model.eval()
-    rsna = RSNAPneumoniaDataModule()
-    trainer = L.Trainer()
+    rsna = RSNAPneumoniaDataModule(configs)
+    trainer = pl.Trainer()
     trainer.test(model=model, dataloaders=rsna.test_dataloader())
     #trainer.predict(model=model, dataloaders=rsna.predict_dataloader())
-    # print(model.matrix)

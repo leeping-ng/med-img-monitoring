@@ -1,3 +1,15 @@
 data:
   image_folder: "../data/preprocess_224_224"
   metadata_path: "../data/pneumonia_dataset_with_metadata.csv"
+model:
+  input_size: [3, 224, 224]
+  num_classes: 2
+  resnet_version: 18  # 18, 34, 50, 101, 152
+training:
+  batch_size: 32
+  learning_rate: 1.0e-4
+  logs_folder: "../logs/"
+  max_epochs: 100
+  patience: 10
+evaluation:
+  checkpoint_path: "lightning_logs/version_88/checkpoints/epoch=18-step=12122.ckpt"
