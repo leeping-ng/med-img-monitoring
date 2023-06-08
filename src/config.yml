@@ -12,4 +12,4 @@ training:
   max_epochs: 100
   patience: 10
 evaluation:
-  checkpoint_path: "lightning_logs/version_88/checkpoints/epoch=18-step=12122.ckpt"
+  checkpoint_path: "../logs/lightning_logs/version_110/checkpoints/epoch=18-step=12122.ckpt"
