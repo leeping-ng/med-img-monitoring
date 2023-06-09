@@ -59,6 +59,7 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         config,
         train_transforms=None,
         val_transforms=None,
+        test_transforms=None,
         batch_size=32,
         num_workers=8,
         shuffle=True,
@@ -78,6 +79,9 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         )
         self.val_transforms = (
             val_transforms if val_transforms is not None else ToTensor()
+        )
+        self.test_transforms = (
+            test_transforms if test_transforms is not None else ToTensor()
         )
         self.shuffle = shuffle
         self.val_split = val_split
@@ -106,7 +110,7 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         # train_val_df = self.df_to_use.iloc[indices_train_val]
         # test_df = self.df_to_use.iloc[indices_test]
         train_val_df = df_with_all_labels.iloc[indices_train_val]
-        test_df = df_with_all_labels.iloc[indices_test]
+        self.test_df = df_with_all_labels.iloc[indices_test]
 
         # Further split train and val
         indices_train, indices_val = train_test_split(
@@ -129,8 +133,8 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         )
         self.dataset_test = RNSAPneumoniaDetectionDataset(
             str(self.image_data),
-            dataframe=test_df,
-            transform=self.val_transforms,
+            dataframe=self.test_df,
+            transform=self.test_transforms,
         )
         # self.dataset_predict = RNSAPneumoniaDetectionDataset(
         #     str(self.image_data),
@@ -160,6 +164,19 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self):
+        return DataLoader(
+            self.dataset_test,
+            self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+        )
+
+    def adj_test_dataloader(self, new_transforms):
+        self.dataset_test = RNSAPneumoniaDetectionDataset(
+            str(self.image_data),
+            dataframe=self.test_df,
+            transform=new_transforms,
+        )
         return DataLoader(
             self.dataset_test,
             self.batch_size,

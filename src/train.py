@@ -33,19 +33,26 @@ def setup(configs):
 
 
 def prepare_data(configs):
-    transform = transforms.Compose(
+    preprocess_transforms = transforms.Compose(
         [
             transforms.ToTensor(),
-            transforms.RandomRotation(30),
-            transforms.RandomHorizontalFlip(0.5),
-            transforms.Resize(256, antialias=True),  # replace with example below
-            transforms.RandomResizedCrop(224, (0.8, 1), antialias=True),
+            transforms.Resize(256, antialias=True),
+            transforms.CenterCrop(224),
         ]
     )
-    # transforms.CenterCrop(224)])
-    # validation: ToTensor(), Resize(256), CenterCrop(224)
+    train_transforms = transforms.Compose(
+        [
+            preprocess_transforms,
+            transforms.RandomRotation(20),
+            transforms.RandomHorizontalFlip(0.5),
+            transforms.RandomResizedCrop(224, (0.9, 1), antialias=True),
+        ]
+    )
     rsna = RSNAPneumoniaDataModule(
-        configs, train_transforms=transform, val_transforms=None
+        configs,
+        train_transforms=train_transforms,
+        val_transforms=preprocess_transforms,
+        test_transforms=preprocess_transforms,
     )
     return rsna
 

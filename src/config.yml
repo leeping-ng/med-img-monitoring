@@ -13,4 +13,4 @@ training:
   patience: 10
   transfer_learn: true
 evaluation:
-  checkpoint_path: "../logs/lightning_logs/version_110/checkpoints/epoch=18-step=12122.ckpt"
+  checkpoint_path: "../logs/lightning_logs/version_116/checkpoints/epoch=19-step=12760.ckpt"
