@@ -22,10 +22,16 @@ def setup(configs):
     early_stop_callback = pl.callbacks.EarlyStopping(
         monitor="val_roc-auc", mode="max", patience=configs["training"]["patience"]
     )
+    checkpoint_callback = pl.callbacks.ModelCheckpoint(
+        monitor="val_roc-auc",
+        save_top_k=1,
+        mode="max",
+        filename="{epoch:02d}-{val_roc-auc:.3f}",
+    )
     logger = pl.loggers.TensorBoardLogger(save_dir=configs["training"]["logs_folder"])
     trainer = pl.Trainer(
         max_epochs=configs["training"]["max_epochs"],
-        callbacks=[early_stop_callback],
+        callbacks=[early_stop_callback, checkpoint_callback],
         logger=logger,
     )
 
