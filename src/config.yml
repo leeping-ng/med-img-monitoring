@@ -11,5 +11,6 @@ training:
   logs_folder: "../logs/"
   max_epochs: 100
   patience: 10
+  transfer_learn: true
 evaluation:
   checkpoint_path: "../logs/lightning_logs/version_110/checkpoints/epoch=18-step=12122.ckpt"

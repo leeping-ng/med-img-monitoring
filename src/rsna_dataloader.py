@@ -21,14 +21,18 @@ class RNSAPneumoniaDetectionDataset(VisionDataset):
             dataframe: the csv file mapping patient id, metadata, file names and label.
             transform: the transformation (i.e. preprocessing and / or augmentation) to apply to the image after loading them.
 
-        This dataset returns a dictionary with the image data, label and metadata. 
+        This dataset returns a dictionary with the image data, label and metadata.
         """
         super().__init__(root=root, transform=transform)
         self.root = Path(self.root)
         self.dataset_dataframe = dataframe
-        self.targets = self.dataset_dataframe.label_rsna_pneumonia.values.astype(np.int64)
+        self.targets = self.dataset_dataframe.label_rsna_pneumonia.values.astype(
+            np.int64
+        )
         self.subject_ids = self.dataset_dataframe.patientId.values
-        self.filenames = [self.root / f"{subject_id}.png" for subject_id in self.subject_ids]
+        self.filenames = [
+            self.root / f"{subject_id}.png" for subject_id in self.subject_ids
+        ]
         self.genders = self.dataset_dataframe["Patient Gender"].values
         self.ages = self.dataset_dataframe["Patient Age"].values
 
@@ -47,7 +51,7 @@ class RNSAPneumoniaDetectionDataset(VisionDataset):
 
     def __len__(self) -> int:
         return len(self.filenames)
-    
+
 
 class RSNAPneumoniaDataModule(pl.LightningDataModule):
     def __init__(
@@ -59,18 +63,22 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         num_workers=8,
         shuffle=True,
         val_split=0.1,
-        random_seed_for_splits = 33
-    ): 
+        random_seed_for_splits=33,
+    ):
         """
-        Pytorch Lightning DataModule defining train / val / test splits for the RSNA dataset. 
+        Pytorch Lightning DataModule defining train / val / test splits for the RSNA dataset.
         """
         super().__init__()
         self.image_data = config["data"]["image_folder"]
         self.csv_data = config["data"]["metadata_path"]
         self.batch_size = batch_size
         self.num_workers = num_workers
-        self.train_transforms = train_transforms if train_transforms is not None else ToTensor()
-        self.val_transforms = val_transforms if val_transforms is not None else ToTensor()
+        self.train_transforms = (
+            train_transforms if train_transforms is not None else ToTensor()
+        )
+        self.val_transforms = (
+            val_transforms if val_transforms is not None else ToTensor()
+        )
         self.shuffle = shuffle
         self.val_split = val_split
         # if not DATA_DIR_RSNA_PROCESSED_IMAGES.exists():
@@ -89,7 +97,9 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
 
         # Use 85% of dataset for train / val and 15% for test
         indices_train_val, indices_test = train_test_split(
-            np.arange(len(df_with_all_labels)), test_size=0.15, random_state=random_seed_for_splits
+            np.arange(len(df_with_all_labels)),
+            test_size=0.15,
+            random_state=random_seed_for_splits,
         )
 
         # ***self.df_to_use has not been initialised***
@@ -97,10 +107,12 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         # test_df = self.df_to_use.iloc[indices_test]
         train_val_df = df_with_all_labels.iloc[indices_train_val]
         test_df = df_with_all_labels.iloc[indices_test]
-        
+
         # Further split train and val
         indices_train, indices_val = train_test_split(
-            np.arange(len(train_val_df)), test_size=self.val_split, random_state=random_seed_for_splits
+            np.arange(len(train_val_df)),
+            test_size=self.val_split,
+            random_state=random_seed_for_splits,
         )
         train_df = train_val_df.iloc[indices_train]
         val_df = train_val_df.iloc[indices_val]
@@ -130,8 +142,6 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         print("#val:   ", len(self.dataset_val))
         print("#test:  ", len(self.dataset_test))
         # print("#predict:  ", len(self.dataset_predict))
-        
-        
 
     def train_dataloader(self):
         return DataLoader(
@@ -156,7 +166,7 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
-    
+
     # def predict_dataloader(self):
     #     return DataLoader(
     #         self.dataset_predict,
@@ -164,5 +174,3 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
     #         shuffle=False,
     #         num_workers=self.num_workers,
     #     )
-
-

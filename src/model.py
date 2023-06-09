@@ -21,7 +21,7 @@ class ResNetClassifier(pl.LightningModule):
         super().__init__()
 
         self.save_hyperparameters()
-        
+
         num_classes = config["model"]["num_classes"]
         resnet_version = config["model"]["resnet_version"]
         self.lr = config["training"]["learning_rate"]
@@ -29,13 +29,15 @@ class ResNetClassifier(pl.LightningModule):
 
         self.optimizer = Adam
         self.loss_fn = nn.CrossEntropyLoss()
-        self.acc = Accuracy(task="binary" if num_classes == 2 else "multiclass", 
-                            num_classes=num_classes)
-        self.auroc = AUROC(task="binary" if num_classes == 2 else "multiclass", 
-                           num_classes=num_classes)
-        
+        self.acc = Accuracy(
+            task="binary" if num_classes == 2 else "multiclass", num_classes=num_classes
+        )
+        self.auroc = AUROC(task="multiclass", num_classes=num_classes)
+
         # Using a pretrained ResNet backbone
-        backbone = self.resnets[resnet_version](weights="IMAGENET1K_V1")
+        backbone = self.resnets[resnet_version](
+            weights="DEFAULT" if config["training"]["transfer_learn"] else None
+        )
         num_filters = backbone.fc.in_features
         layers = list(backbone.children())[:-1]
         self.feature_extractor = nn.Sequential(*layers)
@@ -59,32 +61,97 @@ class ResNetClassifier(pl.LightningModule):
         # Labels from logits - softmax prior?
         preds = torch.argmax(logits, dim=1)
         acc = self.acc(preds, y)
-        roc = self.auroc(preds, y)
+
+        # change this
+        roc = self.auroc(logits, y)
         return loss, acc, roc
 
+    # def predict_step(self, batch):
+    #     x, y = batch["image"], batch["target"]
+    #     logits = self.forward(x)
+    #     outputs = softmax(logits)
 
     def training_step(self, batch, batch_idx):
         loss, acc, roc = self._step(batch)
         # perform logging
-        self.log("train_loss", loss, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
-        self.log("train_acc", acc, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
-        self.log("train_roc-auc", roc, on_step=True, on_epoch=True, logger=True, batch_size=self.batch_size)
+        self.log(
+            "train_loss",
+            loss,
+            on_step=True,
+            on_epoch=True,
+            logger=True,
+            batch_size=self.batch_size,
+        )
+        self.log(
+            "train_acc",
+            acc,
+            on_step=True,
+            on_epoch=True,
+            logger=True,
+            batch_size=self.batch_size,
+        )
+        self.log(
+            "train_roc-auc",
+            roc,
+            on_step=True,
+            on_epoch=True,
+            logger=True,
+            batch_size=self.batch_size,
+        )
         return loss
-
 
     def validation_step(self, batch, batch_idx):
         loss, acc, roc = self._step(batch)
         # perform logging
-        self.log("val_loss", loss, on_epoch=True, prog_bar=False, logger=True, batch_size=self.batch_size)
-        self.log("val_acc", acc, on_epoch=True, prog_bar=True, logger=True, batch_size=self.batch_size)
-        self.log("val_roc-auc", roc, on_epoch=True, prog_bar=True, logger=True, batch_size=self.batch_size)
-
+        self.log(
+            "val_loss",
+            loss,
+            on_epoch=True,
+            prog_bar=False,
+            logger=True,
+            batch_size=self.batch_size,
+        )
+        self.log(
+            "val_acc",
+            acc,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+            batch_size=self.batch_size,
+        )
+        self.log(
+            "val_roc-auc",
+            roc,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+            batch_size=self.batch_size,
+        )
 
     def test_step(self, batch, batch_idx):
         loss, acc, roc = self._step(batch)
         # perform logging
-        self.log("test_loss", loss, on_step=True, prog_bar=True, logger=True, batch_size=self.batch_size)
-        self.log("test_acc", acc, on_step=True, prog_bar=True, logger=True, batch_size=self.batch_size)
-        self.log("test_roc-auc", roc, on_epoch=True, prog_bar=True, logger=True, batch_size=self.batch_size)
-
-    
+        self.log(
+            "test_loss",
+            loss,
+            on_step=True,
+            prog_bar=True,
+            logger=True,
+            batch_size=self.batch_size,
+        )
+        self.log(
+            "test_acc",
+            acc,
+            on_step=True,
+            prog_bar=True,
+            logger=True,
+            batch_size=self.batch_size,
+        )
+        self.log(
+            "test_roc-auc",
+            roc,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+            batch_size=self.batch_size,
+        )
