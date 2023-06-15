@@ -66,10 +66,14 @@ class ResNetClassifier(pl.LightningModule):
         roc = self.auroc(logits, y)
         return loss, acc, roc
 
-    # def predict_step(self, batch):
-    #     x, y = batch["image"], batch["target"]
-    #     logits = self.forward(x)
-    #     outputs = softmax(logits)
+    def predict_step(self, batch, batch_idx):
+        output = {}
+        x, output["y"] = batch["image"], batch["target"]
+        logits = self.forward(x)
+        softmax = nn.Softmax(dim=1)
+        output["softmax"] = softmax(logits)
+        output["preds"] = torch.argmax(logits, dim=1)
+        return output
 
     def training_step(self, batch, batch_idx):
         loss, acc, roc = self._step(batch)

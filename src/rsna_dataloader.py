@@ -72,6 +72,7 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         super().__init__()
         self.image_data = config["data"]["image_folder"]
         self.csv_data = config["data"]["metadata_path"]
+        self.config = config
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.train_transforms = (
@@ -136,16 +137,16 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
             dataframe=self.test_df,
             transform=self.test_transforms,
         )
-        # self.dataset_predict = RNSAPneumoniaDetectionDataset(
-        #     str(self.image_data),
-        #     dataframe=test_df.iloc[:1],
-        #     transform=self.val_transforms,
-        # )
+        # inference also uses test dataset
+        self.dataset_predict = RNSAPneumoniaDetectionDataset(
+            str(self.image_data),
+            dataframe=self.test_df.iloc[: config["inference"]["num_images"]],
+            transform=self.test_transforms,
+        )
 
         print("#train: ", len(self.dataset_train))
         print("#val:   ", len(self.dataset_val))
         print("#test:  ", len(self.dataset_test))
-        # print("#predict:  ", len(self.dataset_predict))
 
     def train_dataloader(self):
         return DataLoader(
@@ -171,23 +172,23 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
         )
 
-    def adj_test_dataloader(self, new_transforms):
-        self.dataset_test = RNSAPneumoniaDetectionDataset(
-            str(self.image_data),
-            dataframe=self.test_df,
-            transform=new_transforms,
-        )
+    def predict_dataloader(self):
         return DataLoader(
-            self.dataset_test,
+            self.dataset_predict,
             self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
         )
 
-    # def predict_dataloader(self):
-    #     return DataLoader(
-    #         self.dataset_predict,
-    #         1,
-    #         shuffle=False,
-    #         num_workers=self.num_workers,
-    #     )
+    def adj_predict_dataloader(self, new_transforms):
+        self.dataset_predict = RNSAPneumoniaDetectionDataset(
+            str(self.image_data),
+            dataframe=self.test_df.iloc[: self.config["inference"]["num_images"]],
+            transform=new_transforms,
+        )
+        return DataLoader(
+            self.dataset_predict,
+            self.batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+        )

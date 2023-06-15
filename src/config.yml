@@ -12,5 +12,6 @@ training:
   max_epochs: 100
   patience: 10
   transfer_learn: true
-evaluation:
+inference:
   checkpoint_path: "../logs/lightning_logs/version_122/checkpoints/epoch=04-val_roc-auc=0.895.ckpt"
+  num_images: 32
