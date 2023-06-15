@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytorch_lightning as pl
 from scipy import stats
 from torchvision import transforms
@@ -23,60 +24,66 @@ if __name__ == "__main__":
     pl.seed_everything(33, workers=True)
     trainer = pl.Trainer()
 
+    df = pd.DataFrame(
+        columns=[
+            "K-S class 0 statistic",
+            "K-S class 0 pvalue",
+            "K-S class 1 statistic",
+            "K-S class 1 pvalue",
+            "Confidence orig",
+            "Confidence shifted",
+            "Chi-Squared statistic",
+            "Chi-Squared pvalue",
+        ]
+    )
+
     output = trainer.predict(model=model, dataloaders=rsna.predict_dataloader())
     batch = next(iter(output))
-    # print(batch["y"])
-    # print(batch["preds"])
-    # print(batch["softmax"])
 
-    transform_c120 = transforms.Compose([transforms.ToTensor(), ContrastTransform(0.8)])
-    dataloader_c120 = rsna.adj_predict_dataloader(transform_c120)
-    shifted_output = trainer.predict(model=model, dataloaders=dataloader_c120)
-    shifted_batch = next(iter(shifted_output))
-    # print(shifted_batch["y"])
-    # print(shifted_batch["preds"])
-    # print(shifted_batch["softmax"])
+    transforms = [
+        transforms.Compose([transforms.ToTensor(), ContrastTransform(0.8)]),
+        transforms.Compose([transforms.ToTensor(), ContrastTransform(0.1)]),
+    ]
 
-    original_softmax = batch["softmax"].numpy()
-    shifted_softmax = shifted_batch["softmax"].numpy()
-    # print(original_softmax)
-    # print(shifted_softmax)
-    original_class_0 = original_softmax[:, 0:1].squeeze()
-    original_class_1 = original_softmax[:, 1:2].squeeze()
-    # print(original_class_0)
-    # print(original_class_1)
+    for transform in transforms:
+        dataloader = rsna.adj_predict_dataloader(transform)
+        shifted_output = trainer.predict(model=model, dataloaders=dataloader)
+        shifted_batch = next(iter(shifted_output))
 
-    shifted_class_0 = shifted_softmax[:, 0:1].squeeze()
-    shifted_class_1 = shifted_softmax[:, 1:2].squeeze()
-    # print(shifted_class_0)
-    # print(shifted_class_1)
+        original_softmax = batch["softmax"].numpy()
+        shifted_softmax = shifted_batch["softmax"].numpy()
 
-    print("*************************************")
-    print("K-S Test Results")
-    print("No shift: ", stats.ks_2samp(original_class_0, original_class_0))
-    # WHY ARE CLASS 0 AND 1 RESULTS THE SAME???
-    print("Class 0: ", stats.ks_2samp(original_class_0, shifted_class_0))
-    print("Class 1: ", stats.ks_2samp(original_class_1, shifted_class_1))
+        # K-S test
+        original_class_0 = original_softmax[:, 0:1].squeeze()
+        original_class_1 = original_softmax[:, 1:2].squeeze()
+        shifted_class_0 = shifted_softmax[:, 0:1].squeeze()
+        shifted_class_1 = shifted_softmax[:, 1:2].squeeze()
+        test_class_0 = stats.ks_2samp(original_class_0, shifted_class_0)
+        test_class_1 = stats.ks_2samp(original_class_1, shifted_class_1)
 
-    original_confs = np.amax(original_softmax, axis=1)
-    original_avg_conf = np.average(original_confs)
-    shifted_confs = np.amax(shifted_softmax, axis=1)
-    shifted_avg_conf = np.average(shifted_confs)
+        # Confidence score
+        original_confs = np.amax(original_softmax, axis=1)
+        original_avg_conf = np.average(original_confs)
+        shifted_confs = np.amax(shifted_softmax, axis=1)
+        shifted_avg_conf = np.average(shifted_confs)
 
-    print("*************************************")
-    print("Confidence Score Results")
-    print("Average max confidence for original: ", original_avg_conf)
-    print("Average max confidence for shifted: ", shifted_avg_conf)
+        # Chi-Squared test
+        original_preds = batch["preds"].numpy()
+        shifted_preds = shifted_batch["preds"].numpy()
+        original_counts = np.bincount(original_preds)
+        shifted_counts = np.bincount(shifted_preds)
+        chisq, p = stats.chisquare(original_counts, shifted_counts)
 
-    original_preds = batch["preds"].numpy()
-    shifted_preds = shifted_batch["preds"].numpy()
-    original_counts = np.bincount(original_preds)
-    shifted_counts = np.bincount(shifted_preds)
-    # print(original_preds)
-    # print(original_counts)
-    # print(shifted_preds)
-    # print(shifted_counts)
+        res = {
+            "K-S class 0 statistic": test_class_0.statistic,
+            "K-S class 0 pvalue": test_class_0.pvalue,
+            "K-S class 1 statistic": test_class_1.statistic,
+            "K-S class 1 pvalue": test_class_1.pvalue,
+            "Confidence orig": original_avg_conf,
+            "Confidence shifted": shifted_avg_conf,
+            "Chi-Squared statistic": chisq,
+            "Chi-Squared pvalue": p,
+        }
+        df = pd.concat([df, pd.DataFrame([res])])
 
-    print("*************************************")
-    print("Chi-Squared Labels Results")
-    print(stats.chisquare(original_counts, shifted_counts))
+    print(df)
