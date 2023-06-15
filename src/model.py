@@ -68,7 +68,7 @@ class ResNetClassifier(pl.LightningModule):
 
     def predict_step(self, batch, batch_idx):
         output = {}
-        x, output["y"] = batch["image"], batch["target"]
+        x, output["target"] = batch["image"], batch["target"]
         logits = self.forward(x)
         softmax = nn.Softmax(dim=1)
         output["softmax"] = softmax(logits)

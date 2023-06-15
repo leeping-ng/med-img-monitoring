@@ -137,7 +137,7 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
             dataframe=self.test_df,
             transform=self.test_transforms,
         )
-        # inference also uses test dataset
+        # inference also uses test dataset & transforms
         self.dataset_predict = RNSAPneumoniaDetectionDataset(
             str(self.image_data),
             dataframe=self.test_df.iloc[: config["inference"]["num_images"]],
