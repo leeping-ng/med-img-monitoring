@@ -42,6 +42,7 @@ class RNSAPneumoniaDetectionDataset(VisionDataset):
         # Added to convert from 1 channel to 3 channels of grayscale
         scan_image = np.repeat(scan_image[..., np.newaxis], 3, -1)
         return {
+            "filename": str(filename),
             "image": self.transform(scan_image),
             "target": self.targets[index],
             "gender": self.genders[index],
@@ -72,7 +73,7 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         self.csv_data = config["data"]["metadata_path"]
         self.config = config
         self.batch_size = config["training"]["batch_size"]
-        self.predict_size = config["inference"]["predict_size"]
+        self.predict_batch_size = config["inference"]["batch_size"]
         self.num_workers = num_workers
         self.train_transforms = (
             train_transforms if train_transforms is not None else ToTensor()
@@ -109,8 +110,8 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         # train_val_df = self.df_to_use.iloc[indices_train_val]
         # test_df = self.df_to_use.iloc[indices_test]
         train_val_df = df_with_all_labels.iloc[indices_train_val]
-        test_df = df_with_all_labels.iloc[indices_test]
-        self.predict_df = test_df.iloc[: config["inference"]["limit_load_size"]]
+        self.test_df = df_with_all_labels.iloc[indices_test]
+        # self.predict_df = test_df.iloc[: config["inference"]["limit_load_size"]]
 
         # Further split train and val
         indices_train, indices_val = train_test_split(
@@ -133,13 +134,7 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         )
         self.dataset_test = RNSAPneumoniaDetectionDataset(
             str(self.image_data),
-            dataframe=test_df,
-            transform=self.test_transforms,
-        )
-        # inference also uses test dataset & transforms
-        self.dataset_predict = RNSAPneumoniaDetectionDataset(
-            str(self.image_data),
-            dataframe=self.predict_df,
+            dataframe=self.test_df,
             transform=self.test_transforms,
         )
 
@@ -171,23 +166,15 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
         )
 
-    def predict_dataloader(self):
-        return DataLoader(
-            self.dataset_predict,
-            self.predict_size,
-            shuffle=self.config["inference"]["shuffle"],
-            num_workers=self.num_workers,
-        )
-
-    def adj_predict_dataloader(self, new_transforms):
+    def predict_dataloader(self, indices, new_transforms):
         self.dataset_predict = RNSAPneumoniaDetectionDataset(
             str(self.image_data),
-            dataframe=self.predict_df,
+            dataframe=self.test_df.iloc[indices],
             transform=new_transforms,
         )
         return DataLoader(
             self.dataset_predict,
-            self.predict_size,
-            shuffle=self.config["inference"]["shuffle"],
+            self.predict_batch_size,
+            shuffle=False,
             num_workers=self.num_workers,
         )
