@@ -60,9 +60,7 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         train_transforms=None,
         val_transforms=None,
         test_transforms=None,
-        batch_size=32,
         num_workers=8,
-        shuffle=True,
         val_split=0.1,
         random_seed_for_splits=33,
     ):
@@ -73,7 +71,8 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         self.image_data = config["data"]["image_folder"]
         self.csv_data = config["data"]["metadata_path"]
         self.config = config
-        self.batch_size = batch_size
+        self.batch_size = config["training"]["batch_size"]
+        self.predict_size = config["inference"]["predict_size"]
         self.num_workers = num_workers
         self.train_transforms = (
             train_transforms if train_transforms is not None else ToTensor()
@@ -84,7 +83,6 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         self.test_transforms = (
             test_transforms if test_transforms is not None else ToTensor()
         )
-        self.shuffle = shuffle
         self.val_split = val_split
         # if not DATA_DIR_RSNA_PROCESSED_IMAGES.exists():
         #     f"Data dir: {DATA_DIR_RSNA_PROCESSED_IMAGES} does not exist. Have you updated default_paths.py?"
@@ -111,7 +109,8 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         # train_val_df = self.df_to_use.iloc[indices_train_val]
         # test_df = self.df_to_use.iloc[indices_test]
         train_val_df = df_with_all_labels.iloc[indices_train_val]
-        self.test_df = df_with_all_labels.iloc[indices_test]
+        test_df = df_with_all_labels.iloc[indices_test]
+        self.predict_df = test_df.iloc[: config["inference"]["limit_load_size"]]
 
         # Further split train and val
         indices_train, indices_val = train_test_split(
@@ -134,13 +133,13 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         )
         self.dataset_test = RNSAPneumoniaDetectionDataset(
             str(self.image_data),
-            dataframe=self.test_df,
+            dataframe=test_df,
             transform=self.test_transforms,
         )
         # inference also uses test dataset & transforms
         self.dataset_predict = RNSAPneumoniaDetectionDataset(
             str(self.image_data),
-            dataframe=self.test_df.iloc[: config["inference"]["num_images"]],
+            dataframe=self.predict_df,
             transform=self.test_transforms,
         )
 
@@ -152,7 +151,7 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         return DataLoader(
             self.dataset_train,
             self.batch_size,
-            shuffle=self.shuffle,
+            shuffle=True,
             num_workers=self.num_workers,
         )
 
@@ -175,20 +174,20 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
     def predict_dataloader(self):
         return DataLoader(
             self.dataset_predict,
-            self.batch_size,
-            shuffle=False,
+            self.predict_size,
+            shuffle=self.config["inference"]["shuffle"],
             num_workers=self.num_workers,
         )
 
     def adj_predict_dataloader(self, new_transforms):
         self.dataset_predict = RNSAPneumoniaDetectionDataset(
             str(self.image_data),
-            dataframe=self.test_df.iloc[: self.config["inference"]["num_images"]],
+            dataframe=self.predict_df,
             transform=new_transforms,
         )
         return DataLoader(
             self.dataset_predict,
-            self.batch_size,
-            shuffle=False,
+            self.predict_size,
+            shuffle=self.config["inference"]["shuffle"],
             num_workers=self.num_workers,
         )

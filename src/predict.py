@@ -42,18 +42,22 @@ if __name__ == "__main__":
 
     transforms = [
         transforms.Compose([transforms.ToTensor(), ContrastTransform(0.8)]),
-        transforms.Compose([transforms.ToTensor(), ContrastTransform(0.1)]),
+        transforms.Compose([transforms.ToTensor(), ContrastTransform(0.6)]),
     ]
 
     for transform in transforms:
+        # another loop here for multiple runs per transform
         dataloader = rsna.adj_predict_dataloader(transform)
         shifted_output = trainer.predict(model=model, dataloaders=dataloader)
         shifted_batch = next(iter(shifted_output))
 
         original_softmax = batch["softmax"].numpy()
         shifted_softmax = shifted_batch["softmax"].numpy()
+        # print(original_softmax)
+        # print(shifted_softmax)
 
         # K-S test
+        # Need to make agnostic to number of classes
         original_class_0 = original_softmax[:, 0:1].squeeze()
         original_class_1 = original_softmax[:, 1:2].squeeze()
         shifted_class_0 = shifted_softmax[:, 0:1].squeeze()

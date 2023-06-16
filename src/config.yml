@@ -14,4 +14,6 @@ training:
   transfer_learn: true
 inference:
   checkpoint_path: "../logs/lightning_logs/version_122/checkpoints/epoch=04-val_roc-auc=0.895.ckpt"
-  num_images: 32
+  shuffle: True
+  limit_load_size: 4000  # for quick prototyping. To limit loading images from test dataset to the first 0 to limit_load_size
+  predict_size: 100      # batch size for prediction
