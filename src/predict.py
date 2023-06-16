@@ -1,3 +1,13 @@
+"""
+TO-DO for Monday:
+1. Statistical test for confidence
+2. Accumulate metrics & calculate accuracy of shift detection over runs:
+    - This should be in a different dataframe
+    - Transform, K-S signal (avg), K-S accuracy, Conf orig (avg), Conf shifted (avg), Chi-Sq signal (avg), Chi-Sq accuracy
+3. Test on 10 runs
+4. Implement other transformations
+"""
+
 import numpy as np
 import pandas as pd
 import pytorch_lightning as pl
@@ -25,28 +35,57 @@ if __name__ == "__main__":
     sample_size = configs["inference"]["sample_size"]
     num_classes = configs["model"]["num_classes"]
     pl.seed_everything(33, workers=True)
-    trainer = pl.Trainer()
+    trainer = pl.Trainer(enable_progress_bar=False)
 
     df = pd.DataFrame(
         columns=[
-            "K-S class 0 statistic",
-            "K-S class 0 pvalue",
-            "K-S class 1 statistic",
-            "K-S class 1 pvalue",
-            "Confidence orig",
-            "Confidence shifted",
-            "Chi-Squared statistic",
-            "Chi-Squared pvalue",
+            "Transform",
+            "K-S cls0 stat",
+            "K-S cls0 pval",
+            "K-S cls1 stat",
+            "K-S cls1 pval",
+            "K-S signal",
+            "K-S shift",
+            "Conf orig",
+            "Conf shifted",
+            "Chi-Sq stat",
+            "Chi-Sq pval",
+            "Chi-Sq shift",
         ]
     )
 
-    transforms = [
-        transforms.Compose([transforms.ToTensor(), ContrastTransform(0.8)]),
-        transforms.Compose([transforms.ToTensor(), ContrastTransform(0.3)]),
-    ]
+    transforms = {
+        "Contrast 180%": transforms.Compose(
+            [transforms.ToTensor(), ContrastTransform(1.8)]
+        ),
+        "Contrast 160%": transforms.Compose(
+            [transforms.ToTensor(), ContrastTransform(1.6)]
+        ),
+        "Contrast 140%": transforms.Compose(
+            [transforms.ToTensor(), ContrastTransform(1.4)]
+        ),
+        "Contrast 120%": transforms.Compose(
+            [transforms.ToTensor(), ContrastTransform(1.2)]
+        ),
+        "Contrast Unchanged": transforms.Compose(
+            [transforms.ToTensor(), ContrastTransform(1.0)]
+        ),
+        "Contrast 80%": transforms.Compose(
+            [transforms.ToTensor(), ContrastTransform(0.8)]
+        ),
+        "Contrast 60%": transforms.Compose(
+            [transforms.ToTensor(), ContrastTransform(0.6)]
+        ),
+        "Contrast 40%": transforms.Compose(
+            [transforms.ToTensor(), ContrastTransform(0.4)]
+        ),
+        "Contrast 20%": transforms.Compose(
+            [transforms.ToTensor(), ContrastTransform(0.2)]
+        ),
+    }
 
     # loop over different transforms
-    for transform in transforms:
+    for trans_name, transform in transforms.items():
         # fix sequence of randomness so that sequence of images for each transform are the same
         random.seed(0)
 
@@ -73,6 +112,7 @@ if __name__ == "__main__":
             # initialise empty data structures to be extended over batches
             ks_original_softmaxes = {}
             ks_shifted_softmaxes = {}
+            ks_result = {}
             for c in range(num_classes):
                 ks_original_softmaxes[c] = []
                 ks_shifted_softmaxes[c] = []
@@ -111,36 +151,49 @@ if __name__ == "__main__":
                 original_preds.extend(list(original_batch["preds"].numpy()))
                 shifted_preds.extend(list(shifted_batch["preds"].numpy()))
 
-            # for c in range(num_classes):
-            #     print(stats.ks_2samp(ks_original_softmaxes[c], ks_shifted_softmaxes[c]))
+            # K-S test
+            ks_shift_detected = False
+            ks_signal = 0
+            for c in range(num_classes):
+                ks_result[c] = stats.ks_2samp(
+                    ks_original_softmaxes[c], ks_shifted_softmaxes[c]
+                )
+                # Reject null hypothesis if any p-value < Bonferroni corrected significance level
+                if ks_result[c].pvalue < configs["inference"]["alpha"] / num_classes:
+                    ks_shift_detected = True
+                ks_signal += ks_result[c].statistic
+            ks_signal /= num_classes
 
-            test_class_0 = stats.ks_2samp(
-                ks_original_softmaxes[0], ks_shifted_softmaxes[0]
-            )
-            test_class_1 = stats.ks_2samp(
-                ks_original_softmaxes[1], ks_shifted_softmaxes[1]
-            )
-
+            # Confidence scores
             original_avg_conf = sum(original_confs) / len(original_confs)
             shifted_avg_conf = sum(shifted_confs) / len(shifted_confs)
 
+            # Chi-Squared test labels
             original_counts = np.bincount(original_preds)
             shifted_counts = np.bincount(shifted_preds)
             try:
-                chisq, p = stats.chisquare(original_counts, shifted_counts)
+                chisq_stat, chisq_p = stats.chisquare(original_counts, shifted_counts)
+                if chisq_p < configs["inference"]["alpha"]:
+                    chisq_shift_detected = True
+                else:
+                    chisq_shift_detected = False
             except:
-                chisq, p = None, None
+                chisq_stat, chisq_p, chisq_shift_detected = None, None, None
 
             res = {
-                "K-S class 0 statistic": test_class_0.statistic,
-                "K-S class 0 pvalue": test_class_0.pvalue,
-                "K-S class 1 statistic": test_class_1.statistic,
-                "K-S class 1 pvalue": test_class_1.pvalue,
-                "Confidence orig": original_avg_conf,
-                "Confidence shifted": shifted_avg_conf,
-                "Chi-Squared statistic": chisq,
-                "Chi-Squared pvalue": p,
+                "Transform": trans_name,
+                "K-S cls0 stat": ks_result[0].statistic,
+                "K-S cls0 pval": ks_result[0].pvalue,
+                "K-S cls1 stat": ks_result[1].statistic,
+                "K-S cls1 pval": ks_result[1].pvalue,
+                "K-S signal": ks_signal,
+                "K-S shift": ks_shift_detected,
+                "Conf orig": original_avg_conf,
+                "Conf shifted": shifted_avg_conf,
+                "Chi-Sq stat": chisq_stat,
+                "Chi-Sq pval": chisq_p,
+                "Chi-Sq shift": chisq_shift_detected,
             }
-            df = pd.concat([df, pd.DataFrame([res])])
+            df = pd.concat([df, pd.DataFrame([res])], ignore_index=True)
 
-        print(df)
+    print(df)
