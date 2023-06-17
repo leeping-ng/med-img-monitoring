@@ -38,9 +38,10 @@ class RNSAPneumoniaDetectionDataset(VisionDataset):
 
     def __getitem__(self, index: int):
         filename = self.filenames[index]
-        scan_image = imread(filename).astype(np.float32)
+        scan_image = imread(filename).astype(np.uint8)  # (np.float32)
         # Added to convert from 1 channel to 3 channels of grayscale
         scan_image = np.repeat(scan_image[..., np.newaxis], 3, -1)
+
         return {
             "filename": str(filename),
             "image": self.transform(scan_image),
