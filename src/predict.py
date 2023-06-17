@@ -18,7 +18,11 @@ from torchvision import transforms
 from config import load_config
 from model import ResNetClassifier
 from rsna_dataloader import RSNAPneumoniaDataModule
-from transforms import preprocess_transforms, ContrastTransform
+from transforms_select import (
+    PREPROCESS_TRANSFORMS,
+    CONTRAST_TRANSFORMS,
+    SALT_PEPPER_NOISE_TRANSFORMS,
+)
 
 
 CONFIG_PATH = "config.yml"
@@ -31,7 +35,7 @@ if __name__ == "__main__":
 
     model.eval()
 
-    rsna = RSNAPneumoniaDataModule(configs, test_transforms=preprocess_transforms)
+    rsna = RSNAPneumoniaDataModule(configs, test_transforms=PREPROCESS_TRANSFORMS)
     sample_size = configs["inference"]["sample_size"]
     num_classes = configs["model"]["num_classes"]
     pl.seed_everything(33, workers=True)
@@ -54,38 +58,10 @@ if __name__ == "__main__":
         ]
     )
 
-    transforms = {
-        "Contrast 180%": transforms.Compose(
-            [transforms.ToTensor(), ContrastTransform(1.8)]
-        ),
-        "Contrast 160%": transforms.Compose(
-            [transforms.ToTensor(), ContrastTransform(1.6)]
-        ),
-        "Contrast 140%": transforms.Compose(
-            [transforms.ToTensor(), ContrastTransform(1.4)]
-        ),
-        "Contrast 120%": transforms.Compose(
-            [transforms.ToTensor(), ContrastTransform(1.2)]
-        ),
-        "Contrast Unchanged": transforms.Compose(
-            [transforms.ToTensor(), ContrastTransform(1.0)]
-        ),
-        "Contrast 80%": transforms.Compose(
-            [transforms.ToTensor(), ContrastTransform(0.8)]
-        ),
-        "Contrast 60%": transforms.Compose(
-            [transforms.ToTensor(), ContrastTransform(0.6)]
-        ),
-        "Contrast 40%": transforms.Compose(
-            [transforms.ToTensor(), ContrastTransform(0.4)]
-        ),
-        "Contrast 20%": transforms.Compose(
-            [transforms.ToTensor(), ContrastTransform(0.2)]
-        ),
-    }
+    ALL_TRANSFORMS = CONTRAST_TRANSFORMS | SALT_PEPPER_NOISE_TRANSFORMS
 
     # loop over different transforms
-    for trans_name, transform in transforms.items():
+    for trans_name, transform in ALL_TRANSFORMS.items():
         # fix sequence of randomness so that sequence of images for each transform are the same
         random.seed(0)
 
@@ -98,7 +74,7 @@ if __name__ == "__main__":
             )
             # print(img_indices)
             original_dataloader = rsna.predict_dataloader(
-                img_indices, preprocess_transforms
+                img_indices, PREPROCESS_TRANSFORMS
             )
             shifted_dataloader = rsna.predict_dataloader(img_indices, transform)
             original_output = trainer.predict(

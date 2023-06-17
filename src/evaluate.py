@@ -1,11 +1,10 @@
 import pytorch_lightning as pl
 from torchsummary import summary
-from torchvision import transforms
 
 from config import load_config
 from model import ResNetClassifier
 from rsna_dataloader import RSNAPneumoniaDataModule
-from transforms import preprocess_transforms
+from transforms_select import PREPROCESS_TRANSFORMS
 
 
 CONFIG_PATH = "config.yml"
@@ -21,7 +20,7 @@ if __name__ == "__main__":
         batch_size=configs["training"]["batch_size"],
     )
     model.eval()
-    rsna = RSNAPneumoniaDataModule(configs, test_transforms=preprocess_transforms)
+    rsna = RSNAPneumoniaDataModule(configs, test_transforms=PREPROCESS_TRANSFORMS)
     pl.seed_everything(33, workers=True)
     trainer = pl.Trainer()
     trainer.test(model=model, dataloaders=rsna.test_dataloader())
