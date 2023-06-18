@@ -19,9 +19,9 @@ from config import load_config
 from model import ResNetClassifier
 from rsna_dataloader import RSNAPneumoniaDataModule
 from transforms_select import (
-    PREPROCESS_TRANSFORMS,
-    CONTRAST_TRANSFORMS,
-    SALT_PEPPER_NOISE_TRANSFORMS,
+    PREPROCESS_TF,
+    CONTRAST_INC_TF,
+    SALT_PEPPER_NOISE_TF,
 )
 
 
@@ -35,7 +35,7 @@ if __name__ == "__main__":
 
     model.eval()
 
-    rsna = RSNAPneumoniaDataModule(configs, test_transforms=PREPROCESS_TRANSFORMS)
+    rsna = RSNAPneumoniaDataModule(configs, test_TF=PREPROCESS_TF)
     sample_size = configs["inference"]["sample_size"]
     num_classes = configs["model"]["num_classes"]
     pl.seed_everything(33, workers=True)
@@ -58,10 +58,10 @@ if __name__ == "__main__":
         ]
     )
 
-    ALL_TRANSFORMS = CONTRAST_TRANSFORMS | SALT_PEPPER_NOISE_TRANSFORMS
+    ALL_TF = CONTRAST_INC_TF | SALT_PEPPER_NOISE_TF
 
     # loop over different transforms
-    for trans_name, transform in ALL_TRANSFORMS.items():
+    for trans_name, transform in ALL_TF.items():
         # fix sequence of randomness so that sequence of images for each transform are the same
         random.seed(0)
 
@@ -73,9 +73,7 @@ if __name__ == "__main__":
                 sample_size,
             )
             # print(img_indices)
-            original_dataloader = rsna.predict_dataloader(
-                img_indices, PREPROCESS_TRANSFORMS
-            )
+            original_dataloader = rsna.predict_dataloader(img_indices, PREPROCESS_TF)
             shifted_dataloader = rsna.predict_dataloader(img_indices, transform)
             original_output = trainer.predict(
                 model=model, dataloaders=original_dataloader

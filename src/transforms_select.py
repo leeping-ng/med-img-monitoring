@@ -1,9 +1,15 @@
 from torchvision import transforms
 
-from transforms_custom import ContrastTransform, SaltPepperNoiseTransform
+from transforms_custom import (
+    ContrastTransform,
+    GammaTransform,
+    SaltPepperNoiseTransform,
+    SpeckleNoiseTransform,
+    BlurSharpenTransform,
+)
 
 
-PREPROCESS_TRANSFORMS = transforms.Compose(
+PREPROCESS_TF = transforms.Compose(
     [
         transforms.ToTensor(),
         transforms.Resize(256, antialias=True),
@@ -11,9 +17,9 @@ PREPROCESS_TRANSFORMS = transforms.Compose(
     ]
 )
 
-TRAIN_TRANSFORMS = transforms.Compose(
+TRAIN_TF = transforms.Compose(
     [
-        PREPROCESS_TRANSFORMS,
+        PREPROCESS_TF,
         transforms.RandomRotation(20),
         transforms.RandomHorizontalFlip(0.5),
         transforms.RandomResizedCrop(224, (0.9, 1), antialias=True),
@@ -21,48 +27,56 @@ TRAIN_TRANSFORMS = transforms.Compose(
 )
 
 
-CONTRAST_TRANSFORMS = {
-    "Contrast 180%": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, ContrastTransform(1.8)]
+CONTRAST_INC_TF = {
+    "Contrast Unchanged": transforms.Compose([PREPROCESS_TF, ContrastTransform(1.0)]),
+    "Contrast Increase 10.0": transforms.Compose(
+        [PREPROCESS_TF, ContrastTransform(10.0)]
     ),
-    "Contrast 160%": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, ContrastTransform(1.6)]
-    ),
-    "Contrast 140%": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, ContrastTransform(1.4)]
-    ),
-    "Contrast 120%": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, ContrastTransform(1.2)]
-    ),
-    "Contrast Unchanged": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, ContrastTransform(1.0)]
-    ),
-    "Contrast 80%": transforms.Compose([PREPROCESS_TRANSFORMS, ContrastTransform(0.8)]),
-    "Contrast 60%": transforms.Compose([PREPROCESS_TRANSFORMS, ContrastTransform(0.6)]),
-    "Contrast 40%": transforms.Compose([PREPROCESS_TRANSFORMS, ContrastTransform(0.4)]),
-    "Contrast 20%": transforms.Compose([PREPROCESS_TRANSFORMS, ContrastTransform(0.2)]),
 }
 
-SALT_PEPPER_NOISE_TRANSFORMS = {
-    "Salt Pepper Noise 0%": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, SaltPepperNoiseTransform(0.0)]
+
+CONTRAST_DEC_TF = {
+    "Contrast Unchanged": transforms.Compose([PREPROCESS_TF, ContrastTransform(1.0)]),
+    "Contrast Decrease 0.2": transforms.Compose(
+        [PREPROCESS_TF, ContrastTransform(0.2)]
     ),
-    "Salt Pepper Noise 5%": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, SaltPepperNoiseTransform(0.05)]
+}
+
+GAMMA_INC_TF = {
+    "Gamma Unchanged": transforms.Compose([PREPROCESS_TF, GammaTransform(1.0)]),
+    "Gamma Increase 2.0": transforms.Compose([PREPROCESS_TF, GammaTransform(2.0)]),
+}
+
+
+GAMMA_DEC_TF = {
+    "Gamma Unchanged": transforms.Compose([PREPROCESS_TF, GammaTransform(1.0)]),
+    "Gamma Decrease 0.2": transforms.Compose([PREPROCESS_TF, GammaTransform(0.2)]),
+}
+
+SALT_PEPPER_NOISE_TF = {
+    "Salt Pepper Noise 0.0": transforms.Compose(
+        [PREPROCESS_TF, SaltPepperNoiseTransform(0.0)]
     ),
-    "Salt Pepper Noise 10%": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, SaltPepperNoiseTransform(0.1)]
+    "Salt Pepper Noise 0.5": transforms.Compose(
+        [PREPROCESS_TF, SaltPepperNoiseTransform(0.5)]
     ),
-    "Salt Pepper Noise 20%": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, SaltPepperNoiseTransform(0.2)]
+}
+
+SPECKLE_NOISE_TF = {
+    "Speckle Noise 0.0": transforms.Compose(
+        [PREPROCESS_TF, SaltPepperNoiseTransform(0.0)]
     ),
-    "Salt Pepper Noise 30%": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, SaltPepperNoiseTransform(0.3)]
+    "Speckle Noise 0.1": transforms.Compose(
+        [PREPROCESS_TF, SaltPepperNoiseTransform(0.1)]
     ),
-    "Salt Pepper Noise 40%": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, SaltPepperNoiseTransform(0.4)]
-    ),
-    "Salt Pepper Noise 50%": transforms.Compose(
-        [PREPROCESS_TRANSFORMS, SaltPepperNoiseTransform(0.5)]
-    ),
+}
+
+BLUR_TF = {
+    "Blur Unchanged": transforms.Compose([PREPROCESS_TF, BlurSharpenTransform(1.0)]),
+    "Blur 0.2": transforms.Compose([PREPROCESS_TF, BlurSharpenTransform(0.2)]),
+}
+
+SHARPEN_TF = {
+    "Sharpen Unchanged": transforms.Compose([PREPROCESS_TF, BlurSharpenTransform(1.0)]),
+    "Sharpen 20.0": transforms.Compose([PREPROCESS_TF, BlurSharpenTransform(20.0)]),
 }
