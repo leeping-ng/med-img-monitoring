@@ -4,7 +4,7 @@ from torchsummary import summary
 from config import load_config
 from model import ResNetClassifier
 from rsna_dataloader import RSNAPneumoniaDataModule
-from transforms_select import PREPROCESS_TRANSFORMS, TRAIN_TRANSFORMS
+from transforms_select import PREPROCESS_TF, TRAIN_TF
 
 
 CONFIG_PATH = "config.yml"
@@ -41,9 +41,9 @@ def setup(configs):
 def prepare_data(configs):
     rsna = RSNAPneumoniaDataModule(
         configs,
-        train_transforms=TRAIN_TRANSFORMS,
-        val_transforms=PREPROCESS_TRANSFORMS,
-        test_transforms=PREPROCESS_TRANSFORMS,
+        train_transforms=TRAIN_TF,
+        val_transforms=PREPROCESS_TF,
+        test_transforms=PREPROCESS_TF,
     )
     return rsna
 

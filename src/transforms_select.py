@@ -12,8 +12,8 @@ from transforms_custom import (
 PREPROCESS_TF = transforms.Compose(
     [
         transforms.ToTensor(),
-        transforms.Resize(256, antialias=True),
-        transforms.CenterCrop(224),
+        # transforms.Resize(256, antialias=True),
+        # transforms.CenterCrop(224),
     ]
 )
 
@@ -22,7 +22,7 @@ TRAIN_TF = transforms.Compose(
         PREPROCESS_TF,
         transforms.RandomRotation(20),
         transforms.RandomHorizontalFlip(0.5),
-        transforms.RandomResizedCrop(224, (0.9, 1), antialias=True),
+        # transforms.RandomResizedCrop(224, (0.9, 1), antialias=True),
     ]
 )
 
@@ -64,10 +64,10 @@ SALT_PEPPER_NOISE_TF = {
 
 SPECKLE_NOISE_TF = {
     "Speckle Noise 0.0": transforms.Compose(
-        [PREPROCESS_TF, SaltPepperNoiseTransform(0.0)]
+        [PREPROCESS_TF, SpeckleNoiseTransform(0.0)]
     ),
     "Speckle Noise 0.1": transforms.Compose(
-        [PREPROCESS_TF, SaltPepperNoiseTransform(0.1)]
+        [PREPROCESS_TF, SpeckleNoiseTransform(0.1)]
     ),
 }
 
@@ -79,4 +79,33 @@ BLUR_TF = {
 SHARPEN_TF = {
     "Sharpen Unchanged": transforms.Compose([PREPROCESS_TF, BlurSharpenTransform(1.0)]),
     "Sharpen 20.0": transforms.Compose([PREPROCESS_TF, BlurSharpenTransform(20.0)]),
+}
+
+MAGNIFY_TF = {
+    "Magnify Unchanged": transforms.Compose(
+        [
+            PREPROCESS_TF,
+        ]
+    ),
+    "Magnify 10%": transforms.Compose(
+        [
+            PREPROCESS_TF,
+            transforms.Resize(246, antialias=True),
+            transforms.CenterCrop(224),
+        ]
+    ),
+    "Magnify 20%": transforms.Compose(
+        [
+            PREPROCESS_TF,
+            transforms.Resize(270, antialias=True),
+            transforms.CenterCrop(224),
+        ]
+    ),
+    "Magnify 30%": transforms.Compose(
+        [
+            PREPROCESS_TF,
+            transforms.Resize(292, antialias=True),
+            transforms.CenterCrop(224),
+        ]
+    ),
 }

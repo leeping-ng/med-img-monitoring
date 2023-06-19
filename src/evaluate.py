@@ -4,7 +4,7 @@ from torchsummary import summary
 from config import load_config
 from model import ResNetClassifier
 from rsna_dataloader import RSNAPneumoniaDataModule
-from transforms_select import PREPROCESS_TRANSFORMS
+from transforms_select import PREPROCESS_TF
 
 
 CONFIG_PATH = "config.yml"
@@ -20,7 +20,7 @@ if __name__ == "__main__":
         batch_size=configs["training"]["batch_size"],
     )
     model.eval()
-    rsna = RSNAPneumoniaDataModule(configs, test_transforms=PREPROCESS_TRANSFORMS)
+    rsna = RSNAPneumoniaDataModule(configs, test_transforms=PREPROCESS_TF)
     pl.seed_everything(33, workers=True)
     trainer = pl.Trainer()
     trainer.test(model=model, dataloaders=rsna.test_dataloader())

@@ -13,7 +13,6 @@ import pandas as pd
 import pytorch_lightning as pl
 import random
 from scipy import stats
-from torchvision import transforms
 
 from config import load_config
 from model import ResNetClassifier
@@ -26,6 +25,7 @@ from transforms_select import (
 
 
 CONFIG_PATH = "config.yml"
+NUM_RUNS = 10
 
 if __name__ == "__main__":
     configs = load_config(CONFIG_PATH)
@@ -35,38 +35,49 @@ if __name__ == "__main__":
 
     model.eval()
 
-    rsna = RSNAPneumoniaDataModule(configs, test_TF=PREPROCESS_TF)
+    rsna = RSNAPneumoniaDataModule(configs, test_transforms=PREPROCESS_TF)
     sample_size = configs["inference"]["sample_size"]
     num_classes = configs["model"]["num_classes"]
     pl.seed_everything(33, workers=True)
     trainer = pl.Trainer(enable_progress_bar=False)
 
-    df = pd.DataFrame(
-        columns=[
-            "Transform",
-            "K-S cls0 stat",
-            "K-S cls0 pval",
-            "K-S cls1 stat",
-            "K-S cls1 pval",
-            "K-S signal",
-            "K-S shift",
-            "Conf orig",
-            "Conf shifted",
-            "Chi-Sq stat",
-            "Chi-Sq pval",
-            "Chi-Sq shift",
-        ]
+    # df = pd.DataFrame(
+    #     columns=[
+    #         "Transform",
+    #         "K-S cls0 stat",
+    #         "K-S cls0 pval",
+    #         "K-S cls1 stat",
+    #         "K-S cls1 pval",
+    #         "K-S signal",
+    #         "K-S shift",
+    #         "Conf orig",
+    #         "Conf shifted",
+    #         "Chi-Sq stat",
+    #         "Chi-Sq pval",
+    #         "Chi-Sq shift",
+    #     ]
+    # )
+
+    df_tf = pd.DataFrame(
+        columns=["Transform", "K-S signal", "K-S acc", "Chi-Sq signal", "Chi-Sq acc"]
     )
 
-    ALL_TF = CONTRAST_INC_TF | SALT_PEPPER_NOISE_TF
+    all_tf = CONTRAST_INC_TF | SALT_PEPPER_NOISE_TF
 
     # loop over different transforms
-    for trans_name, transform in ALL_TF.items():
+    for tf_name, transform in all_tf.items():
+        print("Working on transform:", tf_name, "...")
         # fix sequence of randomness so that sequence of images for each transform are the same
         random.seed(0)
 
+        ks_signals = []
+        ks_detected_shifts = 0
+        chisq_signals = []
+        chisq_detected_shifts = 0
+        chisq_errors = 0
+
         # loop over experiment runs with randomly shuffled images
-        for run in range(1):
+        for run in range(NUM_RUNS):
             # these indices are for all the x images selected for a run (multiple batches to form x)
             img_indices = random.sample(
                 range(0, sample_size),
@@ -102,8 +113,8 @@ if __name__ == "__main__":
                 # print(
                 #     "*************************** Batch: ", i, " ***********************"
                 # )
-                # print(original_batch["filename"])
-                # print(shifted_batch["filename"])
+                # print("Original:", original_batch["filename"])
+                # print("Shifted:", shifted_batch["filename"])
 
                 original_softmax = original_batch["softmax"].numpy()
                 shifted_softmax = shifted_batch["softmax"].numpy()
@@ -155,7 +166,7 @@ if __name__ == "__main__":
                 chisq_stat, chisq_p, chisq_shift_detected = None, None, None
 
             res = {
-                "Transform": trans_name,
+                "Transform": tf_name,
                 "K-S cls0 stat": ks_result[0].statistic,
                 "K-S cls0 pval": ks_result[0].pvalue,
                 "K-S cls1 stat": ks_result[1].statistic,
@@ -168,6 +179,33 @@ if __name__ == "__main__":
                 "Chi-Sq pval": chisq_p,
                 "Chi-Sq shift": chisq_shift_detected,
             }
-            df = pd.concat([df, pd.DataFrame([res])], ignore_index=True)
 
-    print(df)
+            ks_signals.append(ks_signal)
+            if chisq_shift_detected is not None:
+                chisq_signals.append(chisq_stat)
+            else:
+                chisq_errors += 1
+
+            if ks_shift_detected:
+                ks_detected_shifts += 1
+            if chisq_shift_detected is True:
+                chisq_detected_shifts += 1
+
+            # df = pd.concat([df, pd.DataFrame([res])], ignore_index=True)
+
+        res_tf = {
+            "Transform": tf_name,
+            "K-S signal": sum(ks_signals) / NUM_RUNS,
+            "K-S acc": ks_detected_shifts / NUM_RUNS,
+            "Chi-Sq signal": None
+            if NUM_RUNS - chisq_errors == 0
+            else sum(chisq_signals) / (NUM_RUNS - chisq_errors),
+            "Chi-Sq acc": None
+            if NUM_RUNS - chisq_errors == 0
+            else chisq_detected_shifts / (NUM_RUNS - chisq_errors),
+        }
+
+        df_tf = pd.concat([df_tf, pd.DataFrame([res_tf])], ignore_index=True)
+
+    # print(df)
+    print(df_tf)

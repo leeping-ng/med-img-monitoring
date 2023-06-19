@@ -57,7 +57,7 @@ class SpeckleNoiseTransform:
     def __call__(self, tensor):
         tensor = tensor[0, :, :]
         tensor = torch.tensor(
-            random_noise(tensor, mode="speckle", clip=True, variance=self.variance)
+            random_noise(tensor, mode="speckle", clip=True, var=self.variance)
         )
         tensor = tensor.expand(3, 224, 224)
         return tensor
