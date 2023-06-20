@@ -59,11 +59,28 @@ class SpeckleNoiseTransform:
         tensor = torch.tensor(
             random_noise(tensor, mode="speckle", clip=True, var=self.variance)
         )
-        tensor = tensor.expand(3, 224, 224)
+        tensor = tensor.expand(3, 224, 224).float()
         return tensor
 
 
-class BlurSharpenTransform:
+class BlurTransform:
+    def __init__(self, kernel_size):
+        """
+        kernel_size (sequence of python:ints or int): Gaussian kernel size.
+        Can be a sequence of integers like (kx, ky) or a single integer for square kernels.
+
+        sigma (sequence of python:floats or float, optional): Gaussian kernel standard deviation.
+        Can be a sequence of floats like (sigma_x, sigma_y) or a single float to define the same sigma in both X/Y directions.
+        If None, then it is computed using kernel_size as sigma = 0.3 * ((kernel_size - 1) * 0.5 - 1) + 0.8. Default, None.
+        """
+        self.kernel_size = kernel_size
+
+    def __call__(self, tensor):
+        tensor = transforms.functional.gaussian_blur(tensor, self.kernel_size)
+        return tensor
+
+
+class SharpenTransform:
     def __init__(self, sharpness_factor):
         """
         How much to adjust the sharpness. Can be any non-negative number.
