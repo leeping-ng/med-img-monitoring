@@ -108,7 +108,7 @@ SPECKLE_NOISE_TF_EDGE = {
 }
 
 CONTRAST_INC_TF = {
-    "Contrast Unchanged": transforms.Compose([PREPROCESS_TF]),
+    "Contrast Inc Unchanged": transforms.Compose([PREPROCESS_TF]),
     "Contrast Inc 12.5%": transforms.Compose([PREPROCESS_TF, ContrastTransform(1.75)]),
     "Contrast Inc 25%": transforms.Compose([PREPROCESS_TF, ContrastTransform(2.5)]),
     "Contrast Inc 50%": transforms.Compose([PREPROCESS_TF, ContrastTransform(4.0)]),
@@ -116,13 +116,13 @@ CONTRAST_INC_TF = {
 }
 
 CONTRAST_INC_TF_EDGE = {
-    "Contrast Unchanged": transforms.Compose([PREPROCESS_TF]),
+    "Contrast Inc Unchanged": transforms.Compose([PREPROCESS_TF]),
     "Contrast Inc AUC 0.69": transforms.Compose([PREPROCESS_TF, ContrastTransform(7)]),
     "Contrast Inc AUC 0.63": transforms.Compose([PREPROCESS_TF, ContrastTransform(80)]),
 }
 
 CONTRAST_DEC_TF = {
-    "Contrast Unchanged": transforms.Compose([PREPROCESS_TF]),
+    "Contrast Dec Unchanged": transforms.Compose([PREPROCESS_TF]),
     "Contrast Dec 12.5%": transforms.Compose([PREPROCESS_TF, ContrastTransform(0.886)]),
     "Contrast Dec 25%": transforms.Compose([PREPROCESS_TF, ContrastTransform(0.771)]),
     "Contrast Dec 50%": transforms.Compose([PREPROCESS_TF, ContrastTransform(0.543)]),
@@ -130,7 +130,7 @@ CONTRAST_DEC_TF = {
 }
 
 CONTRAST_DEC_TF_EDGE = {
-    "Contrast Unchanged": transforms.Compose([PREPROCESS_TF]),
+    "Contrast Dec Unchanged": transforms.Compose([PREPROCESS_TF]),
     "Contrast Dec AUC 0.69": transforms.Compose(
         [PREPROCESS_TF, ContrastTransform(0.085)]
     ),
@@ -140,7 +140,7 @@ CONTRAST_DEC_TF_EDGE = {
 }
 
 GAMMA_INC_TF = {
-    "Gamma Unchanged": transforms.Compose([PREPROCESS_TF]),
+    "Gamma Inc Unchanged": transforms.Compose([PREPROCESS_TF]),
     "Gamma Inc 12.5%": transforms.Compose([PREPROCESS_TF, GammaTransform(1.74)]),
     "Gamma Inc 25%": transforms.Compose([PREPROCESS_TF, GammaTransform(2.48)]),
     "Gamma Inc 50%": transforms.Compose([PREPROCESS_TF, GammaTransform(3.95)]),
@@ -148,14 +148,14 @@ GAMMA_INC_TF = {
 }
 
 GAMMA_INC_TF_EDGE = {
-    "Gamma Unchanged": transforms.Compose([PREPROCESS_TF]),
+    "Gamma Inc Unchanged": transforms.Compose([PREPROCESS_TF]),
     "Gamma Inc AUC 0.69": transforms.Compose([PREPROCESS_TF, GammaTransform(6.9)]),
     "Gamma Inc AUC 0.5": transforms.Compose([PREPROCESS_TF, GammaTransform(12)]),
 }
 
 
 GAMMA_DEC_TF = {
-    "Gamma Unchanged": transforms.Compose([PREPROCESS_TF]),
+    "Gamma Dec Unchanged": transforms.Compose([PREPROCESS_TF]),
     "Gamma Dec 12.5%": transforms.Compose([PREPROCESS_TF, GammaTransform(0.883)]),
     "Gamma Dec 25%": transforms.Compose([PREPROCESS_TF, GammaTransform(0.765)]),
     "Gamma Dec 50%": transforms.Compose([PREPROCESS_TF, GammaTransform(0.53)]),
@@ -163,7 +163,7 @@ GAMMA_DEC_TF = {
 }
 
 GAMMA_DEC_TF_EDGE = {
-    "Gamma Unchanged": transforms.Compose([PREPROCESS_TF]),
+    "Gamma Dec Unchanged": transforms.Compose([PREPROCESS_TF]),
     "Gamma Dec AUC 0.69": transforms.Compose([PREPROCESS_TF, GammaTransform(0.06)]),
     "Gamma Dec AUC 0.53": transforms.Compose([PREPROCESS_TF, GammaTransform(0.01)]),
 }

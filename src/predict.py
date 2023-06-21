@@ -7,8 +7,9 @@ TO-DO for Monday:
 3. Test on 10 runs
 4. Implement other transformations
 """
-
+import datetime
 import numpy as np
+import os
 import pandas as pd
 import pytorch_lightning as pl
 import random
@@ -19,8 +20,15 @@ from model import ResNetClassifier
 from rsna_dataloader import RSNAPneumoniaDataModule
 from transforms_select import (
     PREPROCESS_TF,
-    CONTRAST_INC_TF,
+    BLUR_TF,
+    SHARPEN_TF,
     SALT_PEPPER_NOISE_TF,
+    SPECKLE_NOISE_TF,
+    CONTRAST_INC_TF,
+    CONTRAST_DEC_TF,
+    GAMMA_INC_TF,
+    GAMMA_DEC_TF,
+    MAGNIFY_TF,
 )
 
 
@@ -28,6 +36,7 @@ CONFIG_PATH = "config.yml"
 NUM_RUNS = 10
 
 if __name__ == "__main__":
+    # logging.getLogger("pl.accelerators.cuda").setLevel(logging.WARNING)
     configs = load_config(CONFIG_PATH)
     model = ResNetClassifier.load_from_checkpoint(
         configs["inference"]["checkpoint_path"]
@@ -59,10 +68,28 @@ if __name__ == "__main__":
     # )
 
     df_tf = pd.DataFrame(
-        columns=["Transform", "K-S signal", "K-S acc", "Chi-Sq signal", "Chi-Sq acc"]
+        columns=[
+            "Transform",
+            "K-S signal",
+            "K-S pval",
+            "K-S acc",
+            "Chi-Sq signal",
+            "Chi-Sq pval",
+            "Chi-Sq acc",
+        ]
     )
 
-    all_tf = CONTRAST_INC_TF | SALT_PEPPER_NOISE_TF
+    all_tf = (
+        BLUR_TF
+        | SHARPEN_TF
+        | SALT_PEPPER_NOISE_TF
+        | SPECKLE_NOISE_TF
+        | CONTRAST_INC_TF
+        | CONTRAST_DEC_TF
+        | GAMMA_INC_TF
+        | GAMMA_DEC_TF
+        | MAGNIFY_TF
+    )
 
     # loop over different transforms
     for tf_name, transform in all_tf.items():
@@ -71,8 +98,10 @@ if __name__ == "__main__":
         random.seed(0)
 
         ks_signals = []
+        ks_pvals = []
         ks_detected_shifts = 0
         chisq_signals = []
+        chisq_pvals = []
         chisq_detected_shifts = 0
         chisq_errors = 0
 
@@ -165,24 +194,26 @@ if __name__ == "__main__":
             except:
                 chisq_stat, chisq_p, chisq_shift_detected = None, None, None
 
-            res = {
-                "Transform": tf_name,
-                "K-S cls0 stat": ks_result[0].statistic,
-                "K-S cls0 pval": ks_result[0].pvalue,
-                "K-S cls1 stat": ks_result[1].statistic,
-                "K-S cls1 pval": ks_result[1].pvalue,
-                "K-S signal": ks_signal,
-                "K-S shift": ks_shift_detected,
-                "Conf orig": original_avg_conf,
-                "Conf shifted": shifted_avg_conf,
-                "Chi-Sq stat": chisq_stat,
-                "Chi-Sq pval": chisq_p,
-                "Chi-Sq shift": chisq_shift_detected,
-            }
+            # res = {
+            #     "Transform": tf_name,
+            #     "K-S cls0 stat": ks_result[0].statistic,
+            #     "K-S cls0 pval": ks_result[0].pvalue,
+            #     "K-S cls1 stat": ks_result[1].statistic,
+            #     "K-S cls1 pval": ks_result[1].pvalue,
+            #     "K-S signal": ks_signal,
+            #     "K-S shift": ks_shift_detected,
+            #     "Conf orig": original_avg_conf,
+            #     "Conf shifted": shifted_avg_conf,
+            #     "Chi-Sq stat": chisq_stat,
+            #     "Chi-Sq pval": chisq_p,
+            #     "Chi-Sq shift": chisq_shift_detected,
+            # }
 
             ks_signals.append(ks_signal)
+            ks_pvals.append((ks_result[0].pvalue + ks_result[1].pvalue) / 2)
             if chisq_shift_detected is not None:
                 chisq_signals.append(chisq_stat)
+                chisq_pvals.append(chisq_p)
             else:
                 chisq_errors += 1
 
@@ -196,16 +227,27 @@ if __name__ == "__main__":
         res_tf = {
             "Transform": tf_name,
             "K-S signal": sum(ks_signals) / NUM_RUNS,
+            "K-S pval": sum(ks_pvals) / NUM_RUNS,
             "K-S acc": ks_detected_shifts / NUM_RUNS,
             "Chi-Sq signal": None
             if NUM_RUNS - chisq_errors == 0
             else sum(chisq_signals) / (NUM_RUNS - chisq_errors),
+            "Chi-Sq pval": None
+            if NUM_RUNS - chisq_errors == 0
+            else sum(chisq_pvals) / (NUM_RUNS - chisq_errors),
             "Chi-Sq acc": None
             if NUM_RUNS - chisq_errors == 0
             else chisq_detected_shifts / (NUM_RUNS - chisq_errors),
         }
 
         df_tf = pd.concat([df_tf, pd.DataFrame([res_tf])], ignore_index=True)
+        print(df_tf)
 
     # print(df)
     print(df_tf)
+    os.makedirs(configs["inference"]["result_folder"], exist_ok=True)
+    time_now = datetime.datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
+
+    df_tf.to_csv(
+        configs["inference"]["result_folder"] + "/" + time_now + ".csv", index=False
+    )
