@@ -15,8 +15,9 @@ training:
 inference:
   checkpoint_path: "../logs/lightning_logs/version_124/checkpoints/epoch=06-val_roc-auc=0.901.ckpt"
   result_folder: "../logs/shifts/"
+  test_dataset_size: 4003
   sample_size: 400  # number of samples to use for each run
   batch_size: 32
   alpha: 0.05 # significance level
 plot:
-  csv_path: "../logs/shifts/21-06-2023_11:06:58.csv"
+  csv_path: "../logs/shifts/22-06-2023_11:02:34.csv"

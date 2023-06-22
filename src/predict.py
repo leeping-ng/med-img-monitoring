@@ -45,6 +45,7 @@ if __name__ == "__main__":
     model.eval()
 
     rsna = RSNAPneumoniaDataModule(configs, test_transforms=PREPROCESS_TF)
+    test_dataset_size = configs["inference"]["test_dataset_size"]
     sample_size = configs["inference"]["sample_size"]
     num_classes = configs["model"]["num_classes"]
     pl.seed_everything(33, workers=True)
@@ -109,10 +110,10 @@ if __name__ == "__main__":
         for run in range(NUM_RUNS):
             # these indices are for all the x images selected for a run (multiple batches to form x)
             img_indices = random.sample(
-                range(0, sample_size),
+                range(0, test_dataset_size),
                 sample_size,
             )
-            # print(img_indices)
+            # print("Run", run, ":", img_indices)
             original_dataloader = rsna.predict_dataloader(img_indices, PREPROCESS_TF)
             shifted_dataloader = rsna.predict_dataloader(img_indices, transform)
             original_output = trainer.predict(
@@ -183,16 +184,14 @@ if __name__ == "__main__":
             shifted_avg_conf = sum(shifted_confs) / len(shifted_confs)
 
             # Chi-Squared test labels
-            original_counts = np.bincount(original_preds)
-            shifted_counts = np.bincount(shifted_preds)
-            try:
-                chisq_stat, chisq_p = stats.chisquare(original_counts, shifted_counts)
-                if chisq_p < configs["inference"]["alpha"]:
-                    chisq_shift_detected = True
-                else:
-                    chisq_shift_detected = False
-            except:
-                chisq_stat, chisq_p, chisq_shift_detected = None, None, None
+            original_counts = np.bincount(original_preds, minlength=num_classes)
+            shifted_counts = np.bincount(shifted_preds, minlength=num_classes)
+
+            chisq_stat, chisq_p = stats.chisquare(shifted_counts, original_counts)
+            if chisq_p < configs["inference"]["alpha"]:
+                chisq_shift_detected = True
+            else:
+                chisq_shift_detected = False
 
             # res = {
             #     "Transform": tf_name,
@@ -211,15 +210,12 @@ if __name__ == "__main__":
 
             ks_signals.append(ks_signal)
             ks_pvals.append((ks_result[0].pvalue + ks_result[1].pvalue) / 2)
-            if chisq_shift_detected is not None:
-                chisq_signals.append(chisq_stat)
-                chisq_pvals.append(chisq_p)
-            else:
-                chisq_errors += 1
+            chisq_signals.append(chisq_stat)
+            chisq_pvals.append(chisq_p)
 
             if ks_shift_detected:
                 ks_detected_shifts += 1
-            if chisq_shift_detected is True:
+            if chisq_shift_detected:
                 chisq_detected_shifts += 1
 
             # df = pd.concat([df, pd.DataFrame([res])], ignore_index=True)
@@ -229,19 +225,12 @@ if __name__ == "__main__":
             "K-S signal": sum(ks_signals) / NUM_RUNS,
             "K-S pval": sum(ks_pvals) / NUM_RUNS,
             "K-S acc": ks_detected_shifts / NUM_RUNS,
-            "Chi-Sq signal": None
-            if NUM_RUNS - chisq_errors == 0
-            else sum(chisq_signals) / (NUM_RUNS - chisq_errors),
-            "Chi-Sq pval": None
-            if NUM_RUNS - chisq_errors == 0
-            else sum(chisq_pvals) / (NUM_RUNS - chisq_errors),
-            "Chi-Sq acc": None
-            if NUM_RUNS - chisq_errors == 0
-            else chisq_detected_shifts / (NUM_RUNS - chisq_errors),
+            "Chi-Sq signal": sum(chisq_signals) / NUM_RUNS,
+            "Chi-Sq pval": sum(chisq_pvals) / NUM_RUNS,
+            "Chi-Sq acc": chisq_detected_shifts / NUM_RUNS,
         }
 
         df_tf = pd.concat([df_tf, pd.DataFrame([res_tf])], ignore_index=True)
-        print(df_tf)
 
     # print(df)
     print(df_tf)
