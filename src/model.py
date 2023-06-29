@@ -135,6 +135,7 @@ class ResNetClassifier(pl.LightningModule):
             logger=True,
             batch_size=self.batch_size,
         )
+        return roc
 
     def test_step(self, batch, batch_idx):
         loss, acc, roc = self._step(batch)
@@ -163,3 +164,4 @@ class ResNetClassifier(pl.LightningModule):
             logger=True,
             batch_size=self.batch_size,
         )
+        return roc

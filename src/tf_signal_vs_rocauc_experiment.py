@@ -1,12 +1,3 @@
-"""
-TO-DO for Monday:
-1. Statistical test for confidence
-2. Accumulate metrics & calculate accuracy of shift detection over runs:
-    - This should be in a different dataframe
-    - Transform, K-S signal (avg), K-S accuracy, Conf orig (avg), Conf shifted (avg), Chi-Sq signal (avg), Chi-Sq accuracy
-3. Test on 10 runs
-4. Implement other transformations
-"""
 import datetime
 import numpy as np
 import os
@@ -57,11 +48,7 @@ if __name__ == "__main__":
             "K-S SM signal",
             "K-S SM pval",
             "K-S SM acc",
-            "K-S conf signal",
-            "K-S conf acc",
-            "Chi-Sq signal",
-            "Chi-Sq pval",
-            "Chi-Sq acc",
+            "K-S SM roc",
         ]
     )
 
@@ -85,12 +72,8 @@ if __name__ == "__main__":
 
         ks_sm_signals = []
         ks_sm_pvals = []
+        ks_sm_rocs = []
         ks_sm_detected_shifts = 0
-        ks_conf_signals = []
-        ks_conf_detected_shifts = 0
-        chisq_signals = []
-        chisq_pvals = []
-        chisq_detected_shifts = 0
 
         # loop over experiment runs with randomly shuffled images
         for run in range(NUM_RUNS):
@@ -109,6 +92,10 @@ if __name__ == "__main__":
             shifted_output = trainer.predict(
                 model=model, dataloaders=shifted_dataloader
             )
+
+            roc = trainer.test(model=model, dataloaders=shifted_dataloader)[0][
+                "test_roc-auc"
+            ]
 
             # initialise empty data structures to be extended over batches
             ks_sm_original_softmaxes = {}
@@ -144,29 +131,6 @@ if __name__ == "__main__":
                         list(shifted_softmax[:, c].squeeze())
                     )
 
-                # K-S taking in confidence scores
-                # find indexes of highest confidence score in original softmax
-                idx_max_confs = np.argmax(original_softmax, axis=1, keepdims=True)
-                original_confs.extend(
-                    list(
-                        np.take_along_axis(
-                            original_softmax, idx_max_confs, axis=1
-                        ).squeeze()
-                    )
-                )
-                # find confidence scores of shifted softmax that corresponds to idx_max_confs
-                shifted_confs.extend(
-                    list(
-                        np.take_along_axis(
-                            shifted_softmax, idx_max_confs, axis=1
-                        ).squeeze()
-                    )
-                )
-
-                # Chi-Squared test labels
-                original_preds.extend(list(original_batch["preds"].numpy()))
-                shifted_preds.extend(list(shifted_batch["preds"].numpy()))
-
             # K-S taking in softmax
             ks_sm_shift_detected = False
             ks_sm_signal = 0
@@ -182,45 +146,16 @@ if __name__ == "__main__":
 
             ks_sm_signals.append(ks_sm_signal)
             ks_sm_pvals.append((ks_sm_result[0].pvalue + ks_sm_result[1].pvalue) / 2)
+            ks_sm_rocs.append(roc)
             if ks_sm_shift_detected:
                 ks_sm_detected_shifts += 1
-
-            # K-S taking in confidence scores
-            ks_conf_shift_detected = False
-            ks_conf_signal = 0
-            ks_conf_result = stats.ks_2samp(original_confs, shifted_confs)
-            if ks_conf_result.pvalue < configs["inference"]["alpha"]:
-                ks_conf_shift_detected = True
-            ks_conf_signal += ks_conf_result.statistic
-
-            ks_conf_signals.append(ks_conf_signal)
-            if ks_conf_shift_detected:
-                ks_conf_detected_shifts += 1
-
-            # Chi-Squared test labels
-            original_counts = np.bincount(original_preds, minlength=num_classes)
-            shifted_counts = np.bincount(shifted_preds, minlength=num_classes)
-            chisq_stat, chisq_p = stats.chisquare(shifted_counts, original_counts)
-            if chisq_p < configs["inference"]["alpha"]:
-                chisq_shift_detected = True
-            else:
-                chisq_shift_detected = False
-
-            chisq_signals.append(chisq_stat)
-            chisq_pvals.append(chisq_p)
-            if chisq_shift_detected:
-                chisq_detected_shifts += 1
 
         res_tf = {
             "Transform": tf_name,
             "K-S SM signal": sum(ks_sm_signals) / NUM_RUNS,
             "K-S SM pval": sum(ks_sm_pvals) / NUM_RUNS,
             "K-S SM acc": ks_sm_detected_shifts / NUM_RUNS,
-            "K-S conf signal": sum(ks_conf_signals) / NUM_RUNS,
-            "K-S conf acc": ks_conf_detected_shifts / NUM_RUNS,
-            "Chi-Sq signal": sum(chisq_signals) / NUM_RUNS,
-            "Chi-Sq pval": sum(chisq_pvals) / NUM_RUNS,
-            "Chi-Sq acc": chisq_detected_shifts / NUM_RUNS,
+            "K-S SM roc": sum(ks_sm_rocs) / NUM_RUNS,
         }
 
         df_tf = pd.concat([df_tf, pd.DataFrame([res_tf])], ignore_index=True)
@@ -230,5 +165,9 @@ if __name__ == "__main__":
     time_now = datetime.datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
 
     df_tf.to_csv(
-        configs["inference"]["result_folder"] + "/" + time_now + ".csv", index=False
+        configs["inference"]["result_folder"]
+        + "/tf_signal_vs_rocauc_"
+        + time_now
+        + ".csv",
+        index=False,
     )
