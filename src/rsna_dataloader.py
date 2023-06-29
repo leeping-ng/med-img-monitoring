@@ -65,6 +65,7 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
         num_workers=8,
         val_split=0.1,
         random_seed_for_splits=33,
+        print_stats=True,
     ):
         """
         Pytorch Lightning DataModule defining train / val / test splits for the RSNA dataset.
@@ -91,14 +92,15 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
 
         df_with_all_labels = pd.read_csv(self.csv_data)
 
-        print("DISTRIBUTION LABEL BY GENDER")
-        print(
-            pd.crosstab(
-                columns=df_with_all_labels["label_rsna_pneumonia"],
-                index=df_with_all_labels["Patient Gender"],
-                normalize="index",
+        if print_stats:
+            print("DISTRIBUTION LABEL BY GENDER")
+            print(
+                pd.crosstab(
+                    columns=df_with_all_labels["label_rsna_pneumonia"],
+                    index=df_with_all_labels["Patient Gender"],
+                    normalize="index",
+                )
             )
-        )
 
         # Use 85% of dataset for train / val and 15% for test
         indices_train_val, indices_test = train_test_split(
@@ -139,9 +141,10 @@ class RSNAPneumoniaDataModule(pl.LightningDataModule):
             transform=self.test_transforms,
         )
 
-        print("#train: ", len(self.dataset_train))
-        print("#val:   ", len(self.dataset_val))
-        print("#test:  ", len(self.dataset_test))
+        if print_stats:
+            print("#train: ", len(self.dataset_train))
+            print("#val:   ", len(self.dataset_val))
+            print("#test:  ", len(self.dataset_test))
 
     def train_dataloader(self):
         return DataLoader(
