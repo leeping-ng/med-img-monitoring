@@ -20,20 +20,20 @@ from transforms_custom import (
 )
 
 # Change 1. INTERVAL
-INTERVAL = np.arange(67, 113, step=6)
+INTERVAL = np.arange(1, 1.6, step=0.04)
 
 
 # Change 2. Transform in function
 def transform(param):
     # only for magnify
-    # return transforms.Compose(
-    #     [
-    #         PREPROCESS_TF,
-    #         transforms.Resize(int(224 * param), antialias=True),
-    #         transforms.CenterCrop(224),
-    #     ]
-    # )
-    return transforms.Compose([PREPROCESS_TF, BlurTransform(int(param))])
+    return transforms.Compose(
+        [
+            PREPROCESS_TF,
+            transforms.Resize(int(224 * param), antialias=True),
+            transforms.CenterCrop(224),
+        ]
+    )
+    # return transforms.Compose([PREPROCESS_TF, GammaTransform(param)])
 
 
 CONFIG_PATH = "config.yml"

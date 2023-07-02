@@ -29,6 +29,9 @@ TRAIN_TF = transforms.Compose(
 
 BLUR_TF = {
     "Blur AUC 0.86": transforms.Compose([PREPROCESS_TF]),
+    "Blur AUC 0.85": transforms.Compose([PREPROCESS_TF, BlurTransform(7)]),
+    "Blur AUC 0.84": transforms.Compose([PREPROCESS_TF, BlurTransform(11)]),
+    "Blur AUC 0.83": transforms.Compose([PREPROCESS_TF, BlurTransform(17)]),
     "Blur AUC 0.82": transforms.Compose([PREPROCESS_TF, BlurTransform(23)]),
     "Blur AUC 0.78": transforms.Compose([PREPROCESS_TF, BlurTransform(37)]),
     "Blur AUC 0.74": transforms.Compose([PREPROCESS_TF, BlurTransform(53)]),
@@ -43,6 +46,9 @@ BLUR_TF_EDGE = {
 
 SHARPEN_TF = {
     "Sharpen AUC 0.86": transforms.Compose([PREPROCESS_TF]),
+    "Sharpen AUC 0.85": transforms.Compose([PREPROCESS_TF, SharpenTransform(10)]),
+    "Sharpen AUC 0.84": transforms.Compose([PREPROCESS_TF, SharpenTransform(17)]),
+    "Sharpen AUC 0.83": transforms.Compose([PREPROCESS_TF, SharpenTransform(20)]),
     "Sharpen AUC 0.82": transforms.Compose([PREPROCESS_TF, SharpenTransform(24)]),
     "Sharpen AUC 0.78": transforms.Compose([PREPROCESS_TF, SharpenTransform(38)]),
     "Sharpen AUC 0.74": transforms.Compose([PREPROCESS_TF, SharpenTransform(46)]),
@@ -58,6 +64,15 @@ SHARPEN_TF_EDGE = {
 
 SALT_PEPPER_NOISE_TF = {
     "Salt Pepper Noise AUC 0.86": transforms.Compose([PREPROCESS_TF]),
+    "Salt Pepper Noise AUC 0.85": transforms.Compose(
+        [PREPROCESS_TF, SaltPepperNoiseTransform(0.001)]
+    ),
+    "Salt Pepper Noise AUC 0.84": transforms.Compose(
+        [PREPROCESS_TF, SaltPepperNoiseTransform(0.0016)]
+    ),
+    "Salt Pepper Noise AUC 0.83": transforms.Compose(
+        [PREPROCESS_TF, SaltPepperNoiseTransform(0.0022)]
+    ),
     "Salt Pepper Noise AUC 0.82": transforms.Compose(
         [PREPROCESS_TF, SaltPepperNoiseTransform(0.003)]
     ),
@@ -93,6 +108,15 @@ SALT_PEPPER_NOISE_TF_EDGE = {
 
 SPECKLE_NOISE_TF = {
     "Speckle Noise AUC 0.86": transforms.Compose([PREPROCESS_TF]),
+    "Speckle Noise AUC 0.85": transforms.Compose(
+        [PREPROCESS_TF, SpeckleNoiseTransform(0.0006)]
+    ),
+    "Speckle Noise AUC 0.84": transforms.Compose(
+        [PREPROCESS_TF, SpeckleNoiseTransform(0.0014)]
+    ),
+    "Speckle Noise AUC 0.83": transforms.Compose(
+        [PREPROCESS_TF, SpeckleNoiseTransform(0.0026)]
+    ),
     "Speckle Noise AUC 0.82": transforms.Compose(
         [PREPROCESS_TF, SpeckleNoiseTransform(0.004)]
     ),
@@ -128,6 +152,13 @@ SPECKLE_NOISE_TF_EDGE = {
 
 CONTRAST_INC_TF = {
     "Contrast Inc AUC 0.86": transforms.Compose([PREPROCESS_TF]),
+    "Contrast Inc AUC 0.85": transforms.Compose([PREPROCESS_TF, ContrastTransform(2)]),
+    "Contrast Inc AUC 0.84": transforms.Compose(
+        [PREPROCESS_TF, ContrastTransform(2.25)]
+    ),
+    "Contrast Inc AUC 0.83": transforms.Compose(
+        [PREPROCESS_TF, ContrastTransform(2.45)]
+    ),
     "Contrast Inc AUC 0.82": transforms.Compose(
         [PREPROCESS_TF, ContrastTransform(2.8)]
     ),
@@ -155,6 +186,15 @@ CONTRAST_INC_TF_EDGE = {
 
 CONTRAST_DEC_TF = {
     "Contrast Dec AUC 0.86": transforms.Compose([PREPROCESS_TF]),
+    "Contrast Dec AUC 0.85": transforms.Compose(
+        [PREPROCESS_TF, ContrastTransform(0.32)]
+    ),
+    "Contrast Dec AUC 0.84": transforms.Compose(
+        [PREPROCESS_TF, ContrastTransform(0.26)]
+    ),
+    "Contrast Dec AUC 0.83": transforms.Compose(
+        [PREPROCESS_TF, ContrastTransform(0.23)]
+    ),
     "Contrast Dec AUC 0.82": transforms.Compose(
         [PREPROCESS_TF, ContrastTransform(0.21)]
     ),
@@ -190,6 +230,9 @@ CONTRAST_DEC_TF_EDGE = {
 
 GAMMA_INC_TF = {
     "Gamma Inc AUC 0.86": transforms.Compose([PREPROCESS_TF]),
+    "Gamma Inc AUC 0.85": transforms.Compose([PREPROCESS_TF, GammaTransform(2.1)]),
+    "Gamma Inc AUC 0.84": transforms.Compose([PREPROCESS_TF, GammaTransform(2.4)]),
+    "Gamma Inc AUC 0.83": transforms.Compose([PREPROCESS_TF, GammaTransform(2.7)]),
     "Gamma Inc AUC 0.82": transforms.Compose([PREPROCESS_TF, GammaTransform(2.9)]),
     "Gamma Inc AUC 0.78": transforms.Compose([PREPROCESS_TF, GammaTransform(4.0)]),
     "Gamma Inc AUC 0.74": transforms.Compose([PREPROCESS_TF, GammaTransform(5.2)]),
@@ -208,6 +251,9 @@ GAMMA_INC_TF_EDGE = {
 
 GAMMA_DEC_TF = {
     "Gamma Dec AUC 0.86": transforms.Compose([PREPROCESS_TF]),
+    "Gamma Dec AUC 0.85": transforms.Compose([PREPROCESS_TF, GammaTransform(0.37)]),
+    "Gamma Dec AUC 0.84": transforms.Compose([PREPROCESS_TF, GammaTransform(0.31)]),
+    "Gamma Dec AUC 0.83": transforms.Compose([PREPROCESS_TF, GammaTransform(0.28)]),
     "Gamma Dec AUC 0.82": transforms.Compose([PREPROCESS_TF, GammaTransform(0.26)]),
     "Gamma Dec AUC 0.78": transforms.Compose([PREPROCESS_TF, GammaTransform(0.21)]),
     "Gamma Dec AUC 0.74": transforms.Compose([PREPROCESS_TF, GammaTransform(0.185)]),
@@ -228,6 +274,27 @@ MAGNIFY_TF = {
     "Magnify AUC 0.86": transforms.Compose(
         [
             PREPROCESS_TF,
+        ]
+    ),
+    "Magnify AUC 0.85": transforms.Compose(
+        [
+            PREPROCESS_TF,
+            transforms.Resize(int(224 * 1.44), antialias=True),
+            transforms.CenterCrop(224),
+        ]
+    ),
+    "Magnify AUC 0.84": transforms.Compose(
+        [
+            PREPROCESS_TF,
+            transforms.Resize(int(224 * 1.5), antialias=True),
+            transforms.CenterCrop(224),
+        ]
+    ),
+    "Magnify AUC 0.83": transforms.Compose(
+        [
+            PREPROCESS_TF,
+            transforms.Resize(int(224 * 1.56), antialias=True),
+            transforms.CenterCrop(224),
         ]
     ),
     "Magnify AUC 0.82": transforms.Compose(

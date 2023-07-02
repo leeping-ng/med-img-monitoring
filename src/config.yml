@@ -20,4 +20,4 @@ inference:
   batch_size: 32
   alpha: 0.05 # significance level
 plot:
-  csv_path: "../logs/shifts/tf_signal_vs_rocauc_29-06-2023_21:54:13.csv"
+  csv_path: "../logs/shifts/tf_signal_vs_rocauc_compiled.csv"
