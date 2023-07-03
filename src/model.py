@@ -73,8 +73,13 @@ class ResNetClassifier(pl.LightningModule):
             batch["target"],
             batch["filename"],
         )
-        logits = self.forward(x)
+        # essentially forward(), but we want to extract embeddings for MMD later
+        x = self.feature_extractor(x)
+        embeddings = x.view(x.size(0), -1)
+        logits = self.classifier(embeddings)
+
         softmax = nn.Softmax(dim=1)
+        output["embeddings"] = embeddings
         output["softmax"] = softmax(logits)
         output["preds"] = torch.argmax(logits, dim=1)
         return output
@@ -165,3 +170,27 @@ class ResNetClassifier(pl.LightningModule):
             batch_size=self.batch_size,
         )
         return roc
+
+
+class UntrainedAutoEncoder(pl.LightningModule):
+    def __init__(self, config):
+        super().__init__()
+
+        self.feature_extractor = nn.Sequential(
+            nn.Conv2d(3, 16, 3, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(16, 64, 3, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(64, 256, 3, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+            # TO-DO: avoid hard coding this
+            nn.Linear(186624, config["inference"]["embedding_size"]),
+        )
+
+    def forward(self, X):
+        x = self.feature_extractor(X)
+        return x
+
+    def predict_step(self, batch, batch_idx):
+        return self.forward(batch["image"])

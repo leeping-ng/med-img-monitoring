@@ -18,6 +18,7 @@ inference:
   test_dataset_size: 4003
   sample_size: 400  # number of samples to use for each run
   batch_size: 32
+  embedding_size: 512
   alpha: 0.05 # significance level
 plot:
   csv_path: "../logs/shifts/tf_signal_vs_rocauc_compiled.csv"
