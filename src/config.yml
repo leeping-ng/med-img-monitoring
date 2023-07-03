@@ -21,4 +21,4 @@ inference:
   embedding_size: 512
   alpha: 0.05 # significance level
 plot:
-  csv_path: "../logs/shifts/tf_signal_vs_rocauc_compiled.csv"
+  csv_path: "../logs/shifts/tf_signal_vs_rocauc_compiled_v2.csv"
